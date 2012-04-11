@@ -317,7 +317,7 @@ trait ContextErrors {
           }
           withAddendum(qual.pos)(
               if (name == nme.CONSTRUCTOR) target + " does not have a constructor"
-              else nameString + " is not a member of " + targetKindString + target + addendum
+              else nameString + " is not a member of " + targetKindString + target.directObjectString + addendum
             )
         }
         issueNormalTypeError(sel, errMsg)
@@ -661,7 +661,7 @@ trait ContextErrors {
       }
 
       private def ambiguousErrorMsgPos(pos: Position, pre: Type, sym1: Symbol, sym2: Symbol, rest: String) =
-        if (sym1.hasDefaultFlag && sym2.hasDefaultFlag && sym1.enclClass == sym2.enclClass) {
+        if (sym1.hasDefault && sym2.hasDefault && sym1.enclClass == sym2.enclClass) {
           val methodName = nme.defaultGetterToMethod(sym1.name)
           (sym1.enclClass.pos,
            "in "+ sym1.enclClass +", multiple overloaded alternatives of " + methodName +
@@ -677,7 +677,7 @@ trait ContextErrors {
 
       def AccessError(tree: Tree, sym: Symbol, pre: Type, owner0: Symbol, explanation: String) = {
         def errMsg = {
-          val location = if (sym.isClassConstructor) owner0 else pre.widen
+          val location = if (sym.isClassConstructor) owner0 else pre.widen.directObjectString
 
           underlyingSymbol(sym).fullLocationString + " cannot be accessed in " +
           location + explanation

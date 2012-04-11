@@ -37,7 +37,7 @@ trait MethodSynthesis {
       require(container.owner.isPackageClass, "Container must be a top-level class in a package: " + container)
       require(tparams.size == args.size, "Arguments must match type constructor arity: " + tparams + ", " + args)
 
-      typeRef(container.typeConstructor.prefix, container, args map (_.tpe))
+      appliedType(container, args map (_.tpe): _*)
     }
 
     def companionType[T](implicit m: M[T]) =
@@ -96,8 +96,7 @@ trait MethodSynthesis {
       finishMethod(m setInfoAndEnter infoFn(m), f)
     }
     private def cloneInternal(original: Symbol, f: Symbol => Tree, name: Name): Tree = {
-      val m = original.cloneSymbol(clazz, newMethodFlags(original)) setPos clazz.pos.focus
-      m.name = name
+      val m = original.cloneSymbol(clazz, newMethodFlags(original), name) setPos clazz.pos.focus
       finishMethod(clazz.info.decls enter m, f)
     }
 
@@ -304,7 +303,7 @@ trait MethodSynthesis {
         }
       }
       private def logDerived(result: Tree): Tree = {
-        debuglog("[+derived] " + ojoin(mods.defaultFlagString, basisSym.accurateKindString, basisSym.getterName.decode)
+        debuglog("[+derived] " + ojoin(mods.flagString, basisSym.accurateKindString, basisSym.getterName.decode)
           + " (" + derivedSym + ")\n        " + result)
 
         result

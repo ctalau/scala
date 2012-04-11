@@ -123,7 +123,7 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
 
       defaultMethodNames.distinct foreach { name =>
         val methods      = clazz.info.findMember(name, 0L, METHOD, false).alternatives
-        val haveDefaults = methods filter (sym => sym.hasParamWhich(_.hasDefaultFlag) && !nme.isProtectedAccessorName(sym.name))
+        val haveDefaults = methods filter (sym => sym.hasParamWhich(_.hasDefault) && !nme.isProtectedAccessorName(sym.name))
 
         if (haveDefaults.lengthCompare(1) > 0) {
           val owners = haveDefaults map (_.owner)
@@ -267,6 +267,7 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
           sym1.locationString +
           (if (sym1.isAliasType) ", which equals "+self.memberInfo(sym1)
            else if (sym1.isAbstractType) " with bounds"+self.memberInfo(sym1)
+           else if (sym1.isModule) ""
            else if (sym1.isTerm) " of type "+self.memberInfo(sym1)
            else "")
          else "")
@@ -380,7 +381,7 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
             overrideError("cannot be used here - class definitions cannot be overridden");
           } else if (!other.isDeferred && member.isClass) {
             overrideError("cannot be used here - classes can only override abstract types");
-          } else if (other.isFinal) { // (1.2)
+          } else if (other.isEffectivelyFinal) { // (1.2)
             overrideError("cannot override final member");
             // synthetic exclusion needed for (at least) default getters.
           } else if (!other.isDeferred && !member.isAnyOverride && !member.isSynthetic) {
@@ -661,7 +662,7 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
           }
 
           // Check the remainder for invalid absoverride.
-          for (member <- rest ; if ((member hasFlag ABSOVERRIDE) && member.isIncompleteIn(clazz))) {
+          for (member <- rest ; if (member.isAbstractOverride && member.isIncompleteIn(clazz))) {
             val other = member.superSymbol(clazz)
             val explanation =
               if (other != NoSymbol) " and overrides incomplete superclass member " + infoString(other)
@@ -755,11 +756,10 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
 
       // 4. Check that every defined member with an `override` modifier overrides some other member.
       for (member <- clazz.info.decls)
-        if ((member hasFlag (OVERRIDE | ABSOVERRIDE)) &&
-            !(clazz.thisType.baseClasses exists (hasMatchingSym(_, member)))) {
+        if (member.isAnyOverride && !(clazz.thisType.baseClasses exists (hasMatchingSym(_, member)))) {
           // for (bc <- clazz.info.baseClasses.tail) Console.println("" + bc + " has " + bc.info.decl(member.name) + ":" + bc.info.decl(member.name).tpe);//DEBUG
           unit.error(member.pos, member.toString() + " overrides nothing");
-          member resetFlag OVERRIDE
+          member resetFlag (OVERRIDE | ABSOVERRIDE)  // Any Override
         }
     }
 
@@ -950,17 +950,20 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
 
       override def traverse(tree: Tree) {
         tree match {
-          case ClassDef(_, _, _, _) |
-               TypeDef(_, _, _, _) =>
+          case ClassDef(_, _, _, _) | TypeDef(_, _, _, _) =>
             validateVariance(tree.symbol)
             super.traverse(tree)
           // ModuleDefs need not be considered because they have been eliminated already
           case ValDef(_, _, _, _) =>
-            validateVariance(tree.symbol)
+            if (!tree.symbol.hasLocalFlag)
+              validateVariance(tree.symbol)
           case DefDef(_, _, tparams, vparamss, _, _) =>
-            validateVariance(tree.symbol)
-            traverseTrees(tparams)
-            traverseTreess(vparamss)
+            // No variance check for object-private/protected methods/values.
+            if (!tree.symbol.hasLocalFlag) {
+              validateVariance(tree.symbol)
+              traverseTrees(tparams)
+              traverseTreess(vparamss)
+            }
           case Template(_, _, _) =>
             super.traverse(tree)
           case _ =>
@@ -1050,10 +1053,17 @@ abstract class RefChecks extends InfoTransform with reflect.internal.transform.R
         /** Symbols which limit the warnings we can issue since they may be value types */
         val isMaybeValue = Set(AnyClass, AnyRefClass, AnyValClass, ObjectClass, ComparableClass, JavaSerializableClass)
 
-        // Whether def equals(other: Any) is overridden or synthetic
+        // Whether def equals(other: Any) has known behavior: it is the default
+        // inherited from java.lang.Object, or it is a synthetically generated
+        // case equals.  TODO - more cases are warnable if the target is a synthetic
+        // equals.
         def isUsingWarnableEquals = {
           val m = receiver.info.member(nme.equals_)
-          (m == Object_equals) || (m == Any_equals) || (m.isSynthetic && m.owner.isCase)
+          def n = actual.info.member(nme.equals_)
+          (   (m == Object_equals)
+           || (m == Any_equals)
+           || (m.isSynthetic && m.owner.isCase && !n.owner.isCase)
+          )
         }
         // Whether this == or != is one of those defined in Any/AnyRef or an overload from elsewhere.
         def isUsingDefaultScalaOp = {
