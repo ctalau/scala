@@ -18,12 +18,14 @@ import java.{ lang => jl }
 import java.util.concurrent.atomic.{ AtomicReferenceFieldUpdater, AtomicInteger, AtomicBoolean }
 
 import scala.concurrent.util.Duration
+import scala.concurrent.impl.NonFatal
 import scala.Option
 
 import scala.annotation.tailrec
 import scala.collection.mutable.Stack
 import scala.collection.mutable.Builder
 import scala.collection.generic.CanBuildFrom
+import language.higherKinds
 
 
 
@@ -82,7 +84,6 @@ import scala.collection.generic.CanBuildFrom
  *  }}}
  */
 trait Future[+T] extends Awaitable[T] {
-self =>
 
   /* Callbacks */
 
@@ -117,7 +118,7 @@ self =>
     case Right(v) => // do nothing
   }
 
-  /** When this future is completed, either through an exception, a timeout, or a value,
+  /** When this future is completed, either through an exception, or a value,
    *  apply the provided function.
    *
    *  If the future has already been completed,
@@ -132,7 +133,7 @@ self =>
 
   /** Creates a new promise.
    */
-  def newPromise[S]: Promise[S]
+  protected def newPromise[S]: Promise[S]
   
   /** Returns whether the future has already been completed with
    *  a value or an exception.
@@ -168,14 +169,11 @@ self =>
    *  and throws a corresponding exception if the original future fails.
    */
   def failed: Future[Throwable] = {
-    def noSuchElem(v: T) =
-      new NoSuchElementException("Future.failed not completed with a throwable. Instead completed with: " + v)
-
     val p = newPromise[Throwable]
 
     onComplete {
       case Left(t) => p success t
-      case Right(v) => p failure noSuchElem(v)
+      case Right(v) => p failure (new NoSuchElementException("Future.failed not completed with a throwable. Instead completed with: " + v))
     }
 
     p.future
@@ -207,7 +205,7 @@ self =>
       case Right(v) =>
         try p success f(v)
         catch {
-          case t => p complete resolver(t)
+          case NonFatal(t) => p complete resolver(t)
         }
     }
 
@@ -233,7 +231,7 @@ self =>
             case Right(v) => p success v
           }
         } catch {
-          case t: Throwable => p complete resolver(t)
+          case NonFatal(t) => p complete resolver(t)
         }
     }
 
@@ -245,7 +243,7 @@ self =>
    *  If the current future contains a value which satisfies the predicate, the new future will also hold that value.
    *  Otherwise, the resulting future will fail with a `NoSuchElementException`.
    *
-   *  If the current future fails or times out, the resulting future also fails or times out, respectively.
+   *  If the current future fails, then the resulting future also fails.
    *
    *  Example:
    *  {{{
@@ -266,7 +264,7 @@ self =>
           if (pred(v)) p success v
           else p failure new NoSuchElementException("Future.filter predicate is not satisfied by: " + v)
         } catch {
-          case t: Throwable => p complete resolver(t)
+          case NonFatal(t) => p complete resolver(t)
         }
     }
 
@@ -285,12 +283,12 @@ self =>
   //   def withFilter(q: S => Boolean): FutureWithFilter[S] = new FutureWithFilter[S](self, x => p(x) && q(x))
   // }
 
-  /** Creates a new future by mapping the value of the current future if the given partial function is defined at that value.
+  /** Creates a new future by mapping the value of the current future, if the given partial function is defined at that value.
    *
    *  If the current future contains a value for which the partial function is defined, the new future will also hold that value.
    *  Otherwise, the resulting future will fail with a `NoSuchElementException`.
    *
-   *  If the current future fails or times out, the resulting future also fails or times out, respectively.
+   *  If the current future fails, then the resulting future also fails.
    *
    *  Example:
    *  {{{
@@ -315,7 +313,7 @@ self =>
           if (pf.isDefinedAt(v)) p success pf(v)
           else p failure new NoSuchElementException("Future.collect partial function is not defined at: " + v)
         } catch {
-          case t: Throwable => p complete resolver(t)
+          case NonFatal(t) => p complete resolver(t)
         }
     }
 
@@ -340,7 +338,7 @@ self =>
     onComplete {
       case Left(t) if pf isDefinedAt t =>
         try { p success pf(t) }
-        catch { case t: Throwable => p complete resolver(t) }
+        catch { case NonFatal(t) => p complete resolver(t) }
       case otherwise => p complete otherwise
     }
 
@@ -368,7 +366,7 @@ self =>
         try {
           p completeWith pf(t)
         } catch {
-          case t: Throwable => p complete resolver(t)
+          case NonFatal(t) => p complete resolver(t)
         }
       case otherwise => p complete otherwise
     }
@@ -411,21 +409,16 @@ self =>
    *  {{{
    *  val f = future { sys.error("failed") }
    *  val g = future { 5 }
-   *  val h = f orElse g
+   *  val h = f fallbackTo g
    *  await(h, 0) // evaluates to 5
    *  }}}
    */
   def fallbackTo[U >: T](that: Future[U]): Future[U] = {
     val p = newPromise[U]
-
     onComplete {
-      case Left(t) => that onComplete {
-        case Left(_) => p failure t
-        case Right(v) => p success v
-      }
-      case Right(v) => p success v
+      case r @ Right(_) ⇒ p complete r
+      case _            ⇒ p completeWith that
     }
-
     p.future
   }
   
@@ -433,13 +426,30 @@ self =>
    *  that conforms to `S`'s erased type or a `ClassCastException` otherwise.
    */
   def mapTo[S](implicit m: Manifest[S]): Future[S] = {
+    import java.{ lang => jl }
+    val toBoxed = Map[Class[_], Class[_]](
+      classOf[Boolean] -> classOf[jl.Boolean],
+      classOf[Byte]    -> classOf[jl.Byte],
+      classOf[Char]    -> classOf[jl.Character],
+      classOf[Short]   -> classOf[jl.Short],
+      classOf[Int]     -> classOf[jl.Integer],
+      classOf[Long]    -> classOf[jl.Long],
+      classOf[Float]   -> classOf[jl.Float],
+      classOf[Double]  -> classOf[jl.Double],
+      classOf[Unit]    -> classOf[scala.runtime.BoxedUnit]
+    )
+
+    def boxedType(c: Class[_]): Class[_] = {
+      if (c.isPrimitive) toBoxed(c) else c
+    }
+
     val p = newPromise[S]
     
     onComplete {
       case l: Left[Throwable, _] => p complete l.asInstanceOf[Either[Throwable, S]]
       case Right(t) =>
         p complete (try {
-          Right(impl.Future.boxedType(m.erasure).cast(t).asInstanceOf[S])
+          Right(boxedType(m.erasure).cast(t).asInstanceOf[S])
         } catch {
           case e: ClassCastException => Left(e)
         })
@@ -497,14 +507,14 @@ self =>
    *  }}}
    */
   def either[U >: T](that: Future[U]): Future[U] = {
-    val p = self.newPromise[U]
+    val p = newPromise[U]
 
     val completePromise: PartialFunction[Either[Throwable, U], _] = {
       case Left(t) => p tryFailure t
       case Right(v) => p trySuccess v
     }
 
-    self onComplete completePromise
+    this onComplete completePromise
     that onComplete completePromise
 
     p.future
@@ -520,8 +530,16 @@ self =>
  *  Note: using this method yields nondeterministic dataflow programs.
  */
 object Future {
-  
-  def apply[T](body: =>T)(implicit executor: ExecutionContext): Future[T] = impl.Future(body)
+ /** Starts an asynchronous computation and returns a `Future` object with the result of that computation.
+  *
+  *  The result becomes available once the asynchronous computation is completed.
+  *
+  *  @tparam T       the type of the result
+  *  @param body     the asychronous computation
+  *  @param execctx  the execution context on which the future is run
+  *  @return         the `Future` holding the result of the computation
+  */
+  def apply[T](body: =>T)(implicit execctx: ExecutionContext): Future[T] = impl.Future(body)
 
   import scala.collection.mutable.Builder
   import scala.collection.generic.CanBuildFrom
@@ -611,7 +629,6 @@ object Future {
     }.map(_.result)
   
 }
-
 
 
 
