@@ -359,6 +359,7 @@ trait Definitions extends reflect.api.StandardDefinitions {
     lazy val SpecializableModule  = getRequiredModule("scala.Specializable")
     lazy val GroupOfSpecializable = SpecializableModule.info.member(newTypeName("Group"))
 
+    lazy val InstrumentModule: Symbol   = getRequiredModule("scala.runtime.Instrument")
     lazy val ConsoleModule: Symbol      = getRequiredModule("scala.Console")
     lazy val ScalaRunTimeModule: Symbol = getRequiredModule("scala.runtime.ScalaRunTime")
     lazy val SymbolModule: Symbol       = getRequiredModule("scala.Symbol")

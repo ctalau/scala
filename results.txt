@@ -1,0 +1,45 @@
+[scalacfork] 11 -- flatten @ scala.collection.AbstractTraversable
+[scalacfork]            List(112, 95, 68, 65, 51, 5, 3, 2, 1, 1), 99.75247524752476%
+[scalacfork] 11 -- orElse @ scala.reflect.internal.Symbols$Symbol
+[scalacfork]            List(2432, 849, 481, 20, 12, 7, 5, 2, 2, 2), 99.94756161510226%
+[scalacfork] 11 -- withFilter @ scala.collection.AbstractTraversable
+[scalacfork]            List(373, 162, 117, 30, 13, 3, 2, 1, 1, 1), 99.85795454545455%
+[scalacfork] 12 -- require @ scala.Predef$
+[scalacfork]            List(43595, 6822, 6156, 666, 462, 135, 118, 77, 69, 40), 99.95530034728192%
+[scalacfork] 12 -- map2 @ scala.reflect.internal.SymbolTable
+[scalacfork]            List(300, 219, 213, 213, 213, 142, 54, 2, 1, 1), 99.8529411764706%
+[scalacfork] 13 -- debuglog @ scala.tools.nsc.Global
+[scalacfork]            List(3115, 261, 258, 209, 94, 80, 75, 39, 23, 23), 99.68973747016706%
+[scalacfork] 13 -- foreach @ scala.collection.mutable.HashSet
+[scalacfork]            List(64, 47, 31, 10, 5, 2, 1, 1, 1, 1), 98.19277108433735%
+[scalacfork] 13 -- filter @ scala.reflect.internal.Symbols$Symbol
+[scalacfork]            List(9654, 3284, 98, 98, 97, 45, 43, 34, 32, 30), 99.95529394232919%
+[scalacfork] 13 -- foreach @ scala.collection.AbstractIterator
+[scalacfork]            List(745, 345, 220, 74, 16, 16, 3, 3, 1, 1), 99.78976874562018%
+[scalacfork] 13 -- at @ scala.reflect.internal.pickling.UnPickler$Scan
+[scalacfork]            List(21661, 14705, 5791, 3289, 1497, 369, 174, 131, 89, 40), 99.96231471401055%
+[scalacfork] 17 -- flatMap @ scala.collection.AbstractTraversable
+[scalacfork]            List(358, 173, 68, 14, 5, 4, 3, 3, 2, 2), 98.59594383775351%
+[scalacfork] 17 -- map @ scala.Option
+[scalacfork]            List(149, 68, 26, 24, 10, 8, 8, 4, 2, 2), 97.72727272727273%
+[scalacfork] 21 -- filterNot @ scala.collection.AbstractTraversable
+[scalacfork]            List(2131, 2131, 647, 241, 182, 142, 111, 68, 63, 52), 98.07855806835572%
+[scalacfork] 28 -- mapConserve @ scala.collection.immutable.List
+[scalacfork]            List(197448, 3900, 1508, 423, 402, 191, 178, 101, 68, 62), 99.84359802738012%
+[scalacfork] 29 -- getOrElse @ scala.Option
+[scalacfork]            List(2792, 508, 261, 258, 258, 102, 48, 16, 16, 12), 98.66019866019866%
+[scalacfork] 32 -- assert @ scala.Predef$
+[scalacfork]            List(56142, 56142, 40083, 30136, 18874, 16114, 14975, 14667, 10194, 5190), 94.03178605840696%
+[scalacfork] 33 -- filter @ scala.collection.AbstractTraversable
+[scalacfork]            List(5881, 1178, 1172, 307, 216, 174, 140, 68, 68, 59), 96.67084116050928%
+[scalacfork] 34 -- forall @ scala.collection.immutable.List
+[scalacfork]            List(12240, 2478, 2028, 2027, 1402, 528, 373, 372, 284, 281), 96.10984980789382%
+[scalacfork] 44 -- assert @ scala.tools.nsc.Global
+[scalacfork]            List(8606, 2761, 2761, 1042, 837, 709, 521, 261, 230, 229), 95.14146444844759%
+[scalacfork] 51 -- exists @ scala.collection.immutable.List
+[scalacfork]            List(23963, 14374, 4402, 2535, 1172, 635, 591, 583, 582, 539), 92.87138396719708%
+[scalacfork] 112 -- foreach @ scala.collection.immutable.List
+[scalacfork]            List(61260, 31502, 17159, 11980, 10730, 9145, 4009, 2764, 1444, 1378), 90.81533477321814%
+[scalacfork] 161 -- map @ scala.collection.AbstractTraversable
+[scalacfork]            List(3886, 3073, 3073, 2467, 2126, 1526, 1195, 1119, 815, 662), 62.418229052552505%
+

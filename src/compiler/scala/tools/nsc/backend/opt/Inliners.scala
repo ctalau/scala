@@ -174,13 +174,39 @@ abstract class Inliners extends SubComponent {
       tfa.isOnWatchlist.clear()
     }
 
-    def analyzeClass(cls: IClass): Unit =
+    def instrument(cls : IClass) : Unit = {
+      cls.methods foreach { (im : IMethod) =>
+        val imInfo = new IMethodInfo(im)
+        if (imInfo.isHigherOrder && im.hasCode){
+          val sb = im.startBlock
+          val firstInstr = sb.firstInstruction
+
+          val instrumentModule = definitions.InstrumentModule
+          val getCodeMethod = definitions.getMember(instrumentModule, nme.getCode)
+          val instrumentCode = List(LOAD_MODULE(instrumentModule), CALL_METHOD(getCodeMethod, Dynamic))
+          
+          
+          sb.replaceInstruction(firstInstr, instrumentCode ++ List(firstInstr))
+          
+          
+        }
+      }
+    }
+    
+    def analyzeClass(cls: IClass): Unit = {
+      instrument(cls)
       if (settings.inline.value) {
         debuglog("Analyzing " + cls)
 
         this.currentIClazz = cls
         val ms = cls.methods filterNot { _.symbol.isConstructor }
         ms foreach { im =>
+
+          val caller = new IMethodInfo(im)
+          if (caller.isHigherOrder && im.hasCode){
+              println(caller.name + " from " + caller.owner.name)
+          }
+
           if(hasInline(im.symbol)) {
             log("Not inlining into " + im.symbol.originalName.decode + " because it is marked @inline.")
           } else if(im.hasCode && !im.symbol.isBridge) {
@@ -188,7 +214,7 @@ abstract class Inliners extends SubComponent {
           }
         }
       }
-
+    }
     val tfa   = new analysis.MTFAGrowable()
     tfa.stat  = global.opt.printStats
     val staleOut      = new mutable.ListBuffer[BasicBlock]
@@ -238,6 +264,10 @@ abstract class Inliners extends SubComponent {
       val inlinedMethodCount = mutable.HashMap.empty[Symbol, Int] withDefaultValue 0
 
       val caller = new IMethodInfo(m)
+      
+      if (caller.isHigherOrder){
+        println(caller.name + " from " + caller.owner.name)
+      }
 
       def preInline(isFirstRound: Boolean): Int = {
         val inputBlocks = caller.m.linearizedBlocks()

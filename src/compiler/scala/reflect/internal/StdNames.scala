@@ -475,6 +475,8 @@ trait StdNames extends NameManglers { self: SymbolTable =>
 
     val synthSwitch: NameType          = "$synthSwitch"
 
+    val getCode : NameType             = "getCode"
+      
     // unencoded operators
     object raw {
       final val AMP  : NameType  = "&"
