@@ -12,6 +12,8 @@ package scala.runtime;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.HashMap;
+
 import scala.math.ScalaNumber;
 
 /** An object (static class) that defines methods used for creating,
@@ -51,13 +53,50 @@ public final class BoxesRunTime
 
 /* BOXING ... BOXING ... BOXING ... BOXING ... BOXING ... BOXING ... BOXING ... BOXING */
 
+    private static class Context {
+        String type;
+        String boxSite;
+        public Context(String boxSite, String type) {
+            this.type = type.substring(type.indexOf("To") + 2, type.indexOf('('));
+            this.boxSite = boxSite;
+        }
+        @Override
+        public String toString() {
+            return "\n" + boxSite + "\n" + type + "\n";
+        }
+        
+        @Override
+        public boolean equals(Object obj) {
+            Context ctx = (Context) obj;
+            if (ctx.boxSite.equals(boxSite) && ctx.type.equals(type))
+                return true;
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return boxSite.hashCode();
+        }
+    }
+    
+    private static HashMap<Context, Integer> boxingCallSites = 
+            new HashMap<Context, Integer>();
+    private static int cnt = 0;
+    
     private static void printCaller(){
         StackTraceElement []ste = Thread.currentThread().getStackTrace();
-        System.out.println(ste[0]);
-        System.out.println(ste[1]);
-        System.out.println(ste[2]);
-        System.out.println(ste[3]);
-//        System.out.println(ste.getFileName() + ":" + ste.getMethodName() + ":");
+        Context context = new Context(ste[3].toString(), ste[2].toString());
+        if (!boxingCallSites.containsKey(context)) {
+            boxingCallSites.put(context, 0);
+        }
+        boxingCallSites.put(context, boxingCallSites.get(context) + 1);
+
+    
+        if (cnt++ == 10000) {
+            System.out.println(boxingCallSites);
+            System.out.println("=======================================================");
+            cnt = 0;
+        }
     }
     
     public static java.lang.Boolean boxToBoolean(boolean b) {

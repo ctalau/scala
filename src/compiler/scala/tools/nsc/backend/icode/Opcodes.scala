@@ -18,7 +18,7 @@ import scala.tools.nsc.util.{Position,NoPosition}
   case THIS(clasz) =>
   case STORE_THIS(kind) =>
   case CONSTANT(const) =>
-  case LOAD_ARRAY_ITEM(kind) =>
+  case LOAD_ARRAY_ITEM(kind) => 
   case LOAD_LOCAL(local) =>
   case LOAD_FIELD(field, isStatic) =>
   case LOAD_MODULE(module) =>
