@@ -43,3 +43,27 @@
 [scalacfork] 161 -- map @ scala.collection.AbstractTraversable
 [scalacfork]            List(3886, 3073, 3073, 2467, 2126, 1526, 1195, 1119, 815, 662), 62.418229052552505%
 
+
+
+
+
+
+[scalacfork] 29 -- filter @ scala.collection.AbstractTraversable
+[scalacfork]            List(792, 545, 174, 98, 31, 23, 14, 10, 10, 9), 97.26339794754846%
+[scalacfork]            List(scala.collection.TraversableLike$class.filterNot(TraversableLike.scala:270), scala.reflect.internal.Types$class.elimSuper(Types.scala:6081), scala.tools.nsc.ast.parser.Parsers$Parser.removeAsPlaceholder$1(Parsers.scala:703))
+[scalacfork] 30 -- assert @ scala.Predef$
+[scalacfork]            List(30873, 30873, 28196, 16100, 11567, 10776, 8584, 8403, 6602, 4815), 94.09353601670757%
+[scalacfork]            List(scala.reflect.internal.Symbols$TypeHistory.<init>(Symbols.scala:3127), scala.reflect.internal.Symbols$TypeHistory.<init>(Symbols.scala:3126), scala.reflect.internal.Symbols$Symbol.initFlags(Symbols.scala:642))
+[scalacfork] 38 -- exists @ scala.collection.immutable.List
+[scalacfork]            List(2737, 1929, 1290, 1106, 545, 298, 216, 172, 121, 112), 93.75412359797669%
+[scalacfork]            List(scala.collection.SeqLike$class.contains(SeqLike.scala:409), scala.reflect.internal.BaseTypeSeqs$class.compoundBaseTypeSeq(BaseTypeSeqs.scala:230), scala.tools.nsc.typechecker.Implicits$ImplicitInfo.containsError(Implicits.scala:183))
+[scalacfork] 39 -- assert @ scala.tools.nsc.Global
+[scalacfork]            List(8448, 2707, 2707, 583, 497, 450, 182, 164, 52, 50), 98.38509316770187%
+[scalacfork]            List(scala.tools.nsc.symtab.SymbolLoaders.enterIfNew(SymbolLoaders.scala:28), scala.tools.nsc.symtab.SymbolLoaders.enterClassAndModule(SymbolLoaders.scala:61), scala.tools.nsc.symtab.SymbolLoaders.enterClassAndModule(SymbolLoaders.scala:62))
+[scalacfork] 96 -- foreach @ scala.collection.immutable.List
+[scalacfork]            List(16626, 8139, 7060, 6998, 3586, 1696, 1601, 632, 469, 466), 90.60816897629041%
+[scalacfork]            List(scala.util.MurmurHash3.orderedHash(MurmurHash3.scala:119), scala.reflect.api.Trees$Traverser.traverseTrees(Trees.scala:1027), scala.collection.TraversableLike$class.map(TraversableLike.scala:241))
+[scalacfork] 113 -- map @ scala.collection.AbstractTraversable
+[scalacfork]            List(1377, 802, 753, 374, 312, 237, 234, 211, 181, 181), 65.82886190341712%
+[scalacfork]            List(scala.reflect.internal.Symbols$TypeSymbol.tpe(Symbols.scala:2591), scala.reflect.internal.util.Collections$class.mmap(Collections.scala:35), scala.reflect.internal.util.Collections$$anonfun$mmap$1.apply(Collections.scala:35))
+
