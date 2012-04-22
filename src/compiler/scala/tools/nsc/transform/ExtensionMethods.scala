@@ -50,7 +50,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
         val index = alts indexOf imeth
         assert(index >= 0, alts+" does not contain "+imeth)
         def altName(index: Int) = newTermName("extension"+index+"$"+imeth.name)
-        altName(index) #:: ((0 until alts.length).toStream filter (index !=) map altName)
+        altName(index) #:: ((0 until alts.length).toStream filter (index != _) map altName)
       case tpe =>
         assert(tpe != NoType, imeth.name+" not found in "+imeth.owner+"'s decls: "+imeth.owner.info.decls)
         Stream(newTermName("extension$"+imeth.name))
@@ -68,7 +68,7 @@ abstract class ExtensionMethods extends Transform with TypingTransformers {
 
   private def normalize(stpe: Type, clazz: Symbol): Type = stpe match {
     case PolyType(tparams, restpe) =>
-      GenPolyType(tparams dropRight clazz.typeParams.length, normalize(restpe, clazz))
+      GenPolyType(tparams dropRight clazz.typeParams.length, normalize(restpe.substSym(tparams takeRight clazz.typeParams.length, clazz.typeParams), clazz))
     case MethodType(tparams, restpe) =>
       restpe
     case _ =>

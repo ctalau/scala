@@ -31,7 +31,7 @@ object ScalaRunTime {
     clazz.isArray && (atLevel == 1 || isArrayClass(clazz.getComponentType, atLevel - 1))
 
   def isValueClass(clazz: Class[_]) = clazz.isPrimitive()
-  def isTuple(x: Any) = tupleNames(x.getClass.getName)
+  def isTuple(x: Any) = x != null && tupleNames(x.getClass.getName)
   def isAnyVal(x: Any) = x match {
     case _: Byte | _: Short | _: Char | _: Int | _: Long | _: Float | _: Double | _: Boolean | _: Unit => true
     case _                                                                                             => false
@@ -51,17 +51,8 @@ object ScalaRunTime {
    *  e.g. classOf[int], not classOf[java.lang.Integer].  The compiler
    *  rewrites expressions like 5.getClass to come here.
    */
-  def anyValClass[T <: AnyVal](value: T): Class[T] = (value match {
-    case x: Byte    => java.lang.Byte.TYPE
-    case x: Short   => java.lang.Short.TYPE
-    case x: Char    => java.lang.Character.TYPE
-    case x: Int     => java.lang.Integer.TYPE
-    case x: Long    => java.lang.Long.TYPE
-    case x: Float   => java.lang.Float.TYPE
-    case x: Double  => java.lang.Double.TYPE
-    case x: Boolean => java.lang.Boolean.TYPE
-    case x: Unit    => java.lang.Void.TYPE
-  }).asInstanceOf[Class[T]]
+  def anyValClass[T <: AnyVal : ClassManifest](value: T): Class[T] =
+    classManifest[T].erasure.asInstanceOf[Class[T]]
 
   /** Retrieve generic array element */
   def array_apply(xs: AnyRef, idx: Int): Any = xs match {
@@ -329,14 +320,14 @@ object ScalaRunTime {
       case null                         => "null"
       case ""                           => "\"\""
       case x: String                    => if (x.head.isWhitespace || x.last.isWhitespace) "\"" + x + "\"" else x
-      case x if useOwnToString(x)       => x toString
+      case x if useOwnToString(x)       => x.toString
       case x: AnyRef if isArray(x)      => arrayToString(x)
       case x: collection.Map[_, _]      => x.iterator take maxElements map mapInner mkString (x.stringPrefix + "(", ", ", ")")
       case x: Iterable[_]               => x.iterator take maxElements map inner mkString (x.stringPrefix + "(", ", ", ")")
       case x: Traversable[_]            => x take maxElements map inner mkString (x.stringPrefix + "(", ", ", ")")
       case x: Product1[_] if isTuple(x) => "(" + inner(x._1) + ",)" // that special trailing comma
       case x: Product if isTuple(x)     => x.productIterator map inner mkString ("(", ",", ")")
-      case x                            => x toString
+      case x                            => x.toString
     }
 
     // The try/catch is defense against iterables which aren't actually designed
