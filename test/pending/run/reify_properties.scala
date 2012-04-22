@@ -1,7 +1,9 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     /** A mutable property whose getter and setter may be customized. */
     case class Property[T](init: T) {
       private var value: T = init
@@ -52,5 +54,9 @@ object Test extends App {
 
     println("user1: " + user1)
     println("user2: " + user2)
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

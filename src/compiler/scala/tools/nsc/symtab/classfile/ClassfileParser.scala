@@ -433,7 +433,10 @@ abstract class ClassfileParser {
           sym.info.decl(part.encode)
         }//.suchThat(module == _.isModule)
 
-        sym = sym1 orElse sym.info.decl(part.encode.toTypeName)
+        sym = (
+          if (sym1 ne NoSymbol) sym1
+          else sym.info.decl(part.encode.toTypeName)
+        )
       }
     }
     sym
@@ -776,8 +779,7 @@ abstract class ClassfileParser {
           // with arrays of primitive types.
           if (elemtp.typeSymbol.isAbstractType && !(elemtp <:< definitions.ObjectClass.tpe))
             elemtp = intersectionType(List(elemtp, definitions.ObjectClass.tpe))
-
-          definitions.arrayType(elemtp)
+          appliedType(definitions.ArrayClass.tpe, List(elemtp))
         case '(' =>
           // we need a method symbol. given in line 486 by calling getType(methodSym, ..)
           assert(sym ne null, sig)

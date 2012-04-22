@@ -270,7 +270,8 @@ trait TypeDiagnostics {
     private val savedName = sym.name
     def restoreName()     = sym.name = savedName
     def isAltered         = sym.name != savedName
-    def modifyName(f: String => String) = sym setName newTypeName(f(sym.name.toString))
+    def modifyName(f: String => String) =
+      sym.name = newTypeName(f(sym.name.toString))
 
     /** Prepend java.lang, scala., or Predef. if this type originated
      *  in one of those.
@@ -456,20 +457,14 @@ trait TypeDiagnostics {
 
       ex match {
         case CyclicReference(sym, info: TypeCompleter) =>
-          if (context0.owner.isTermMacro) {
-            // see comments to TypeSigError for an explanation of this special case
-            // [Eugene] is there a better way?
-            throw ex
-          } else {
-            val pos = info.tree match {
-              case Import(expr, _)  => expr.pos
-              case _                => ex.pos
-            }
-            contextError(context0, pos, cyclicReferenceMessage(sym, info.tree) getOrElse ex.getMessage())
-
-            if (sym == ObjectClass)
-              throw new FatalError("cannot redefine root "+sym)
+          val pos = info.tree match {
+            case Import(expr, _)  => expr.pos
+            case _                => ex.pos
           }
+          contextError(context0, pos, cyclicReferenceMessage(sym, info.tree) getOrElse ex.getMessage())
+
+          if (sym == ObjectClass)
+            throw new FatalError("cannot redefine root "+sym)
         case _ =>
           contextError(context0, ex.pos, ex)
       }

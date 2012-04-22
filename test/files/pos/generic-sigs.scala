@@ -1,5 +1,3 @@
-import language.existentials
-
 object A {
   def f1 = List(classOf[Int], classOf[String])
   def f2 = List(classOf[String], classOf[Int])

@@ -70,9 +70,10 @@ abstract class Enumeration (initial: Int) extends Serializable {
 
   /** The name of this enumeration.
    */
-  override def toString =
-    ((getClass.getName stripSuffix MODULE_SUFFIX_STRING split '.').last split 
-       Pattern.quote(NAME_JOIN_STRING)).last
+  override def toString = (
+    (getClass.getName stripSuffix MODULE_SUFFIX_STRING split '.' last)
+    split Pattern.quote(NAME_JOIN_STRING) last
+  )
 
   /** The mapping from the integer used to identify values to the actual
     * values. */
@@ -80,7 +81,7 @@ abstract class Enumeration (initial: Int) extends Serializable {
 
   /** The cache listing all values of this enumeration. */
   @transient private var vset: ValueSet = null
-  @transient @volatile private var vsetDefined = false
+  @transient private var vsetDefined = false
 
   /** The mapping from the integer used to identify values to their
     * names. */

@@ -12,7 +12,6 @@ package generic
 
 import mutable.{Builder, MapBuilder}
 import annotation.bridge
-import language.higherKinds
 
 /** A template for companion objects of `Map` and subclasses thereof.
  *

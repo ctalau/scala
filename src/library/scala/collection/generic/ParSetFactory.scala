@@ -12,7 +12,6 @@ import collection.mutable.Builder
 import collection.parallel.Combiner
 import collection.parallel.ParSet
 import collection.parallel.ParSetLike
-import language.higherKinds
 
 /**
  *  @author Aleksandar Prokopec

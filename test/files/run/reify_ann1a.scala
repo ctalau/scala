@@ -1,10 +1,14 @@
-import scala.reflect.mirror._
+import scala.reflect._
+import scala.reflect.api._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 class ann(bar: List[String]) extends StaticAnnotation
 
 object Test extends App {
   // test 1: reify
-  val tree = reify{
+  val tree = scala.reflect.Code.lift{
     @ann(bar=List("1a")) @ann(bar=List("1b")) class C[@ann(bar=List("2a")) @ann(bar=List("2b")) T](@ann(bar=List("3a")) @ann(bar=List("3b")) x: T @ann(bar=List("4a")) @ann(bar=List("4b"))) {
       @ann(bar=List("5a")) @ann(bar=List("5b")) def f(x: Int @ann(bar=List("6a")) @ann(bar=List("6b"))) = {
         @ann(bar=List("7a")) @ann(bar=List("7b")) val r = (x + 3): @ann(bar=List("8a")) @ann(bar=List("8b"))
@@ -16,7 +20,8 @@ object Test extends App {
   println(tree.toString)
 
   // test 2: import and typecheck
-  val toolbox = mkToolBox()
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
   val ttree = toolbox.typeCheck(tree)
   println(ttree.toString)
 

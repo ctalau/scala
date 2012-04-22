@@ -18,7 +18,6 @@ import scala.collection.GenSeq
 import scala.collection.generic.{ CanBuildFrom, SliceInterval }
 import scala.collection.generic.CanCombineFrom
 import scala.collection.parallel.immutable.ParRange
-import language.implicitConversions
 
 
 

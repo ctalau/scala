@@ -15,7 +15,6 @@ import scala.tools.nsc.symtab._
 import ch.epfl.lamp.compiler.msil.{Type => MsilType, _}
 import ch.epfl.lamp.compiler.msil.emit._
 import ch.epfl.lamp.compiler.msil.util.PECustomMod
-import language.postfixOps
 
 abstract class GenMSIL extends SubComponent {
   import global._
@@ -366,7 +365,7 @@ abstract class GenMSIL extends SubComponent {
             arr.foreach(emitConst)
           }
 
-        // TODO: other Tags: NoTag, UnitTag, ClazzTag, EnumTag, ArrayTag ???
+        // TODO: other Tags: NoTag, UnitTag, ClassTag, EnumTag, ArrayTag ???
 
         case _ => abort("could not handle attribute argument: " + const)
       }
@@ -389,7 +388,7 @@ abstract class GenMSIL extends SubComponent {
           case DoubleTag =>  buf.put(0x0d.toByte)
           case StringTag =>  buf.put(0x0e.toByte)
 
-          // TODO: other Tags: NoTag, UnitTag, ClazzTag, EnumTag ???
+          // TODO: other Tags: NoTag, UnitTag, ClassTag, EnumTag ???
 
           // ArrayTag falls in here
           case _ => abort("could not handle attribute argument: " + c)
@@ -969,7 +968,7 @@ abstract class GenMSIL extends SubComponent {
               case DoubleTag  => mcode.Emit(OpCodes.Ldc_R8, const.doubleValue)
               case StringTag  => mcode.Emit(OpCodes.Ldstr, const.stringValue)
               case NullTag    => mcode.Emit(OpCodes.Ldnull)
-              case ClazzTag   =>
+              case ClassTag   =>
                 mcode.Emit(OpCodes.Ldtoken, msilType(const.typeValue))
                 mcode.Emit(OpCodes.Call, TYPE_FROM_HANDLE)
               case _          => abort("Unknown constant value: " + const)

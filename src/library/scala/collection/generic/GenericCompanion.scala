@@ -10,7 +10,6 @@ package scala.collection
 package generic
 
 import mutable.Builder
-import language.higherKinds
 
 /** A template class for companion objects of "regular" collection classes
  *  represent an unconstrained higher-kinded type. Typically

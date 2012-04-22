@@ -12,8 +12,14 @@ trait UnCurry {
 
   private def expandAlias(tp: Type): Type = if (!tp.isHigherKinded) tp.normalize else tp
 
+  private def isUnboundedGeneric(tp: Type) = tp match {
+    case t @ TypeRef(_, sym, _) => sym.isAbstractType && !(t <:< AnyRefClass.tpe)
+    case _ => false
+  }
+
   val uncurry: TypeMap = new TypeMap {
     def apply(tp0: Type): Type = {
+      // tp0.typeSymbolDirect.initialize
       val tp = expandAlias(tp0)
       tp match {
         case MethodType(params, MethodType(params1, restpe)) =>
@@ -25,13 +31,13 @@ trait UnCurry {
           apply(MethodType(h.cloneSymbol.resetFlag(IMPLICIT) :: t, restpe))
         case NullaryMethodType(restpe) =>
           apply(MethodType(List(), restpe))
-        case TypeRef(pre, ByNameParamClass, arg :: Nil) =>
+        case TypeRef(pre, ByNameParamClass, List(arg)) =>
           apply(functionType(List(), arg))
-        case TypeRef(pre, RepeatedParamClass, arg :: Nil) =>
-          apply(seqType(arg))
-        case TypeRef(pre, JavaRepeatedParamClass, arg :: Nil) =>
+        case TypeRef(pre, RepeatedParamClass, args) =>
+          apply(appliedType(SeqClass.typeConstructor, args))
+        case TypeRef(pre, JavaRepeatedParamClass, args) =>
           apply(arrayType(
-            if (isUnboundedGeneric(arg)) ObjectClass.tpe else arg))
+            if (isUnboundedGeneric(args.head)) ObjectClass.tpe else args.head))
         case _ =>
           expandAlias(mapOver(tp))
       }

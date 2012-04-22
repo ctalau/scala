@@ -11,8 +11,6 @@
 package scala.collection
 package generic
 
-import language.higherKinds
-
 /** A template for companion objects of `SortedMap` and subclasses thereof.
  *
  *  @since 2.8

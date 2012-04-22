@@ -1,7 +1,9 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     class DateError extends Exception
 
     /** Simulating properties in Scala
@@ -37,5 +39,9 @@ object Test extends App {
       case de: DateError => println("DateError")
       case e: Exception => println("Exception")
     }
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

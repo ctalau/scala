@@ -35,8 +35,7 @@ object Marshal {
   def load[A](buffer: Array[Byte])(implicit expected: ClassManifest[A]): A = {
     val in = new ObjectInputStream(new ByteArrayInputStream(buffer))
     val found = in.readObject.asInstanceOf[ClassManifest[_]]
-    // todo. [Eugene] needs review, since ClassManifests no longer capture typeArguments
-    if (found.tpe <:< expected.tpe) {
+    if (found <:< expected) {
       val o = in.readObject.asInstanceOf[A]
       in.close()
       o

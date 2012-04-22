@@ -9,7 +9,7 @@
 package scala.annotation
 
 /** A base class for classfile annotations. These are stored as
- *  [[http://docs.oracle.com/javase/7/docs/technotes/guides/language/annotations.html#_top Java annotations]]]
+ *  [[http://java.sun.com/j2se/1.5.0/docs/guide/language/annotations.html#_top Java annotations]]]
  *  in classfiles.
  *
  *  @author  Martin Odersky

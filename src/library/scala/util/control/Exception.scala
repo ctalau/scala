@@ -10,8 +10,6 @@ package scala.util.control
 
 import collection.immutable.List
 import java.lang.reflect.InvocationTargetException
-import language.implicitConversions
-
 
 /** Classes representing the components of exception handling.
  *  Each class is independently composable.  Some example usages:
@@ -232,5 +230,8 @@ object Exception {
     classes exists (_ isAssignableFrom x.getClass)
 
   private def pfFromExceptions(exceptions: Class[_]*): PartialFunction[Throwable, Nothing] =
-    { case x if wouldMatch(x, exceptions) => throw x }
+    new scala.runtime.AbstractPartialFunction[Throwable, Nothing] {
+      def apply(x: Throwable) = throw x
+      def _isDefinedAt(x: Throwable) = wouldMatch(x, exceptions)
+    }
 }

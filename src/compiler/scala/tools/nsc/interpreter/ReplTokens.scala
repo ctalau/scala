@@ -9,7 +9,6 @@ package interpreter
 import util.{ BatchSourceFile, Indenter }
 import scala.tools.nsc.ast.parser.Tokens._
 import java.lang.Integer.toOctalString
-import language.{implicitConversions, existentials}
 
 /** This began as an attempt at a completely minimal
  *  pretty printer for a token stream, but as it turns out

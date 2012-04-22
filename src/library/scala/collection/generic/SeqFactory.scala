@@ -10,7 +10,6 @@
 
 package scala.collection
 package generic
-import language.higherKinds
 
 /** A template for companion objects of Seq and subclasses thereof.
  *

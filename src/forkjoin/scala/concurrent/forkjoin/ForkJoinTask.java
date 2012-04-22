@@ -16,7 +16,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RunnableFuture;
+//import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -115,19 +115,18 @@ import java.lang.reflect.Constructor;
  * <p>The ForkJoinTask class is not usually directly subclassed.
  * Instead, you subclass one of the abstract classes that support a
  * particular style of fork/join processing, typically {@link
- * RecursiveAction} for most computations that do not return results,
- * {@link RecursiveTask} for those that do, and {@link
- * CountedCompleter} for those in which completed actions trigger
- * other actions.  Normally, a concrete ForkJoinTask subclass declares
- * fields comprising its parameters, established in a constructor, and
- * then defines a {@code compute} method that somehow uses the control
- * methods supplied by this base class. While these methods have
- * {@code public} access (to allow instances of different task
- * subclasses to call each other's methods), some of them may only be
- * called from within other ForkJoinTasks (as may be determined using
- * method {@link #inForkJoinPool}).  Attempts to invoke them in other
- * contexts result in exceptions or errors, possibly including {@code
- * ClassCastException}.
+ * RecursiveAction} for computations that do not return results, or
+ * {@link RecursiveTask} for those that do.  Normally, a concrete
+ * ForkJoinTask subclass declares fields comprising its parameters,
+ * established in a constructor, and then defines a {@code compute}
+ * method that somehow uses the control methods supplied by this base
+ * class. While these methods have {@code public} access (to allow
+ * instances of different task subclasses to call each other's
+ * methods), some of them may only be called from within other
+ * ForkJoinTasks (as may be determined using method {@link
+ * #inForkJoinPool}).  Attempts to invoke them in other contexts
+ * result in exceptions or errors, possibly including
+ * {@code ClassCastException}.
  *
  * <p>Method {@link #join} and its variants are appropriate for use
  * only when completion dependencies are acyclic; that is, the
@@ -138,17 +137,17 @@ import java.lang.reflect.Constructor;
  * {@link Phaser}, {@link #helpQuiesce}, and {@link #complete}) that
  * may be of use in constructing custom subclasses for problems that
  * are not statically structured as DAGs. To support such usages a
- * ForkJoinTask may be atomically <em>tagged</em> with a {@code
- * short} value using {@link #setForkJoinTaskTag} or {@link
- * #compareAndSetForkJoinTaskTag} and checked using {@link
- * #getForkJoinTaskTag}. The ForkJoinTask implementation does not
- * use these {@code protected} methods or tags for any purpose, but
+ * ForkJoinTask may be atomically <em>marked</em> using {@link
+ * #markForkJoinTask} and checked for marking using {@link
+ * #isMarkedForkJoinTask}. The ForkJoinTask implementation does not
+ * use these {@code protected} methods or marks for any purpose, but
  * they may be of use in the construction of specialized subclasses.
  * For example, parallel graph traversals can use the supplied methods
  * to avoid revisiting nodes/tasks that have already been processed.
- * Also, completion based designs can use them to record that subtasks
- * have completed. (Method names for tagging are bulky in part to
- * encourage definition of methods that reflect their usage patterns.)
+ * Also, completion based designs can use them to record that one
+ * subtask has completed. (Method names for marking are bulky in part
+ * to encourage definition of methods that reflect their usage
+ * patterns.)
  *
  * <p>Most base support methods are {@code final}, to prevent
  * overriding of implementations that are intrinsically tied to the
@@ -214,10 +213,6 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * thin-lock techniques, so use some odd coding idioms that tend
      * to avoid them, mainly by arranging that every synchronized
      * block performs a wait, notifyAll or both.
-     *
-     * These control bits occupy only (some of) the upper half (16
-     * bits) of status field. The lower bits are used for user-defined
-     * tags.
      */
 
     /** The run status of this task */
@@ -226,12 +221,13 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     static final int NORMAL      = 0xf0000000;  // must be negative
     static final int CANCELLED   = 0xc0000000;  // must be < NORMAL
     static final int EXCEPTIONAL = 0x80000000;  // must be < CANCELLED
-    static final int SIGNAL      = 0x00010000;  // must be >= 1 << 16
-    static final int SMASK       = 0x0000ffff;  // short bits for tags
+    static final int SIGNAL      = 0x00000001;
+    static final int MARKED      = 0x00000002;
 
     /**
      * Marks completion and wakes up threads waiting to join this
-     * task.
+     * task. A specialization for NORMAL completion is in method
+     * doExec.
      *
      * @param completion one of NORMAL, CANCELLED, EXCEPTIONAL
      * @return completion status on exit
@@ -241,7 +237,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             if ((s = status) < 0)
                 return s;
             if (U.compareAndSwapInt(this, STATUS, s, s | completion)) {
-                if ((s >>> 16) != 0)
+                if ((s & SIGNAL) != 0)
                     synchronized (this) { notifyAll(); }
                 return completion;
             }
@@ -263,22 +259,26 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             } catch (Throwable rex) {
                 return setExceptionalCompletion(rex);
             }
-            if (completed)
-                s = setCompletion(NORMAL);
+            while ((s = status) >= 0 && completed) {
+                if (U.compareAndSwapInt(this, STATUS, s, s | NORMAL)) {
+                    if ((s & SIGNAL) != 0)
+                        synchronized (this) { notifyAll(); }
+                    return NORMAL;
+                }
+            }
         }
         return s;
     }
 
     /**
-     * Tries to set SIGNAL status unless already completed. Used by
-     * ForkJoinPool. Other variants are directly incorporated into
-     * externalAwaitDone etc.
+     * Tries to set SIGNAL status. Used by ForkJoinPool. Other
+     * variants are directly incorporated into externalAwaitDone etc.
      *
      * @return true if successful
      */
     final boolean trySetSignal() {
-        int s = status;
-        return s >= 0 && U.compareAndSwapInt(this, STATUS, s, s | SIGNAL);
+        int s;
+        return U.compareAndSwapInt(this, STATUS, s = status, s | SIGNAL);
     }
 
     /**
@@ -327,6 +327,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
         return s;
     }
+
 
     /**
      * Implementation for join, get, quietlyJoin. Directly handles
@@ -416,39 +417,25 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * @return status on exit
      */
     private int setExceptionalCompletion(Throwable ex) {
-        int s;
-        if ((s = status) >= 0) {
-            int h = System.identityHashCode(this);
-            final ReentrantLock lock = exceptionTableLock;
-            lock.lock();
-            try {
-                expungeStaleExceptions();
-                ExceptionNode[] t = exceptionTable;
-                int i = h & (t.length - 1);
-                for (ExceptionNode e = t[i]; ; e = e.next) {
-                    if (e == null) {
-                        t[i] = new ExceptionNode(this, ex, t[i]);
-                        break;
-                    }
-                    if (e.get() == this) // already present
-                        break;
+        int h = System.identityHashCode(this);
+        final ReentrantLock lock = exceptionTableLock;
+        lock.lock();
+        try {
+            expungeStaleExceptions();
+            ExceptionNode[] t = exceptionTable;
+            int i = h & (t.length - 1);
+            for (ExceptionNode e = t[i]; ; e = e.next) {
+                if (e == null) {
+                    t[i] = new ExceptionNode(this, ex, t[i]);
+                    break;
                 }
-            } finally {
-                lock.unlock();
+                if (e.get() == this) // already present
+                    break;
             }
-            s = setCompletion(EXCEPTIONAL);
+        } finally {
+            lock.unlock();
         }
-        ForkJoinTask<?> p = internalGetCompleter(); // propagate
-        if (p != null && p.status >= 0)
-            p.setExceptionalCompletion(ex);
-        return s;
-    }
-
-    /**
-     * Exception propagation support for tasks with completers.
-     */
-    ForkJoinTask<?> internalGetCompleter() {
-        return null;
+        return setCompletion(EXCEPTIONAL);
     }
 
     /**
@@ -530,7 +517,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         Throwable ex;
         if (e == null || (ex = e.ex) == null)
             return null;
-        if (false && e.thrower != Thread.currentThread().getId()) {
+        if (e.thrower != Thread.currentThread().getId()) {
             Class<? extends Throwable> ec = ex.getClass();
             try {
                 Constructor<?> noArgCtor = null;
@@ -920,18 +907,6 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     /**
-     * Completes this task normally without setting a value. The most
-     * recent value established by {@link #setRawResult} (or {@code
-     * null} by default) will be returned as the result of subsequent
-     * invocations of {@code join} and related operations.
-     *
-     * @since 1.8
-     */
-    public final void quietlyComplete() {
-        setCompletion(NORMAL);
-    }
-
-    /**
      * Waits if necessary for the computation to complete, and then
      * retrieves its result.
      *
@@ -1250,18 +1225,15 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     protected abstract void setRawResult(V value);
 
     /**
-     * Immediately performs the base action of this task and returns
-     * true if, upon return from this method, this task is guaranteed
-     * to have completed normally. This method may return false
-     * otherwise, to indicate that this task is not necessarily
-     * complete (or is not known to be complete), for example in
+     * Immediately performs the base action of this task.  This method
+     * is designed to support extensions, and should not in general be
+     * called otherwise. The return value controls whether this task
+     * is considered to be done normally. It may return false in
      * asynchronous actions that require explicit invocations of
-     * completion methods. This method may also throw an (unchecked)
-     * exception to indicate abnormal exit. This method is designed to
-     * support extensions, and should not in general be called
-     * otherwise.
+     * {@link #complete} to become joinable. It may also throw an
+     * (unchecked) exception to indicate abnormal exit.
      *
-     * @return {@code true} if this task is known to have completed normally
+     * @return {@code true} if completed normally
      */
     protected abstract boolean exec();
 
@@ -1330,53 +1302,44 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         return wt.pool.nextTaskFor(wt.workQueue);
     }
 
-    // tag operations
+    // Mark-bit operations
 
     /**
-     * Returns the tag for this task.
+     * Returns true if this task is marked.
      *
-     * @return the tag for this task
+     * @return true if this task is marked
      * @since 1.8
      */
-    public final short getForkJoinTaskTag() {
-        return (short)status;
+    public final boolean isMarkedForkJoinTask() {
+        return (status & MARKED) != 0;
     }
 
     /**
-     * Atomically sets the tag value for this task.
+     * Atomically sets the mark on this task.
      *
-     * @param tag the tag value
-     * @return the previous value of the tag
+     * @return true if this task was previously unmarked
      * @since 1.8
      */
-    public final short setForkJoinTaskTag(short tag) {
+    public final boolean markForkJoinTask() {
         for (int s;;) {
-            if (U.compareAndSwapInt(this, STATUS, s = status,
-                                    (s & ~SMASK) | (tag & SMASK)))
-                return (short)s;
+            if (((s = status) & MARKED) != 0)
+                return false;
+            if (U.compareAndSwapInt(this, STATUS, s, s | MARKED))
+                return true;
         }
     }
 
     /**
-     * Atomically conditionally sets the tag value for this task.
-     * Among other applications, tags can be used as visit markers
-     * in tasks operating on graphs, as in methods that check: {@code
-     * if (task.compareAndSetForkJoinTaskTag((short)0, (short)1))}
-     * before processing, otherwise exiting because the node has
-     * already been visited.
+     * Atomically clears the mark on this task.
      *
-     * @param e the expected tag value
-     * @param tag the new tag value
-     * @return true if successful; i.e., the current value was
-     * equal to e and is now tag.
+     * @return true if this task was previously marked
      * @since 1.8
      */
-    public final boolean compareAndSetForkJoinTaskTag(short e, short tag) {
+    public final boolean unmarkForkJoinTask() {
         for (int s;;) {
-            if ((short)(s = status) != e)
+            if (((s = status) & MARKED) == 0)
                 return false;
-            if (U.compareAndSwapInt(this, STATUS, s,
-                                    (s & ~SMASK) | (tag & SMASK)))
+            if (U.compareAndSwapInt(this, STATUS, s, s & ~MARKED))
                 return true;
         }
     }

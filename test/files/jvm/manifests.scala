@@ -1,6 +1,7 @@
 object Test extends App {
   Test1
   Test2
+  //Test3  // Java 1.5+ only
 }
 
 class Foo[T](x: T)
@@ -50,8 +51,7 @@ object Test1 extends TestUtil {
   print(new Foo(List(new Foo(2))))
   println()
 
-  print(new Bar[String] { def f = "abc" });
-  {print(new Bar[String] { def f = "abc" })}
+  print(new Bar[String] { def f = "abc" })
   println()
 }
 
@@ -88,6 +88,15 @@ object Test2 {
   println()
 }
 
+object Test3 extends TestUtil {
+  import scala.reflect.Manifest._
+  val ct1 = classType(classOf[Char])
+  val ct2 = classType(classOf[List[_]], ct1)
+  print(ct1)
+  //print(ct2)  // ??? x=scala.List[char], m=scala.reflect.Manifest[scala.runtime.Nothing$]
+  println()
+}
+
 trait TestUtil {
   import java.io._
   def write[A](o: A): Array[Byte] = {
@@ -103,10 +112,8 @@ trait TestUtil {
   }
   import scala.reflect._
   def print[T](x: T)(implicit m: Manifest[T]) {
-    // manifests are no longer serializable
-//    val m1: Manifest[T] = read(write(m))
-    val m1: Manifest[T] = m
+    val m1: Manifest[T] = read(write(m))
     val x1 = x.toString.replaceAll("@[0-9a-z]+$", "")
-    println("x="+x1+", m="+m1+", k="+m1.tpe.kind+", s="+m1.sym.toString)
+    println("x="+x1+", m="+m1)
   }
 }

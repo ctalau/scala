@@ -1,9 +1,8 @@
-import scala.reflect.mirror._
-
 object Test extends App {
+  import scala.reflect._;
   def titi: Unit = {
     var truc = 0
-    val tata = reify{() => {
+    val tata = Code.lift{() => {
       truc = truc + 6
     }}
     ()

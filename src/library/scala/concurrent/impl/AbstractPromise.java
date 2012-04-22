@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 
 abstract class AbstractPromise {
-    private volatile Object _ref;
+    private volatile Object _ref = null;
     protected final static AtomicReferenceFieldUpdater<AbstractPromise, Object> updater =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractPromise.class, Object.class, "_ref");
+	AtomicReferenceFieldUpdater.newUpdater(AbstractPromise.class, Object.class, "_ref");
 }

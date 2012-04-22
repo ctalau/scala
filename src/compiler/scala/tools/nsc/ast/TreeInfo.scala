@@ -44,7 +44,7 @@ abstract class TreeInfo extends reflect.internal.TreeInfo {
   }
 
   def isInterface(mods: HasFlags, body: List[Tree]) =
-    mods.isTrait && (body forall isInterfaceMember)
+    mods.hasTraitFlag && (body forall isInterfaceMember)
 
   def isAllowedInUniversalTrait(stat: Tree): Boolean = stat match {
     case _: ValDef => false

@@ -58,7 +58,7 @@ class DocFactory(val reporter: Reporter, val settings: doc.Settings) { processor
       case Right(sourceCode) =>
         new compiler.Run() compileSources List(new BatchSourceFile("newSource", sourceCode))
     }
-
+    
     if (reporter.hasErrors)
       return None
 
@@ -80,7 +80,6 @@ class DocFactory(val reporter: Reporter, val settings: doc.Settings) { processor
     val modelFactory = (
       new { override val global: compiler.type = compiler }
         with model.ModelFactory(compiler, settings)
-        with model.ModelFactoryImplicitSupport
         with model.comment.CommentFactory
         with model.TreeFactory {
           override def templateShouldDocument(sym: compiler.Symbol) =
@@ -90,8 +89,7 @@ class DocFactory(val reporter: Reporter, val settings: doc.Settings) { processor
 
     modelFactory.makeModel match {
       case Some(madeModel) =>
-        if (settings.reportModel)
-          println("model contains " + modelFactory.templatesCount + " documentable templates")
+        println("model contains " + modelFactory.templatesCount + " documentable templates")
         Some(madeModel)
       case None =>
         println("no documentable class found in compilation units")

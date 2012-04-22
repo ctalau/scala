@@ -112,8 +112,8 @@ trait Unapplies extends ast.TreeDSL
 
   private def toIdent(x: DefTree) = Ident(x.name) setPos x.pos.focus
 
-  private def classType(cdef: ClassDef, tparams: List[TypeDef], symbolic: Boolean = true): Tree = {
-    val tycon = if (symbolic) REF(cdef.symbol) else Ident(cdef.name)
+  private def classType(cdef: ClassDef, tparams: List[TypeDef]): Tree = {
+    val tycon = REF(cdef.symbol)
     if (tparams.isEmpty) tycon else AppliedTypeTree(tycon, tparams map toIdent)
   }
 
@@ -166,19 +166,14 @@ trait Unapplies extends ast.TreeDSL
 
   /** The apply method corresponding to a case class
    */
-  def factoryMeth(mods: Modifiers, name: TermName, cdef: ClassDef, symbolic: Boolean): DefDef = {
+  def caseModuleApplyMeth(cdef: ClassDef): DefDef = {
     val tparams   = cdef.tparams map copyUntypedInvariant
     val cparamss  = constrParamss(cdef)
-    def classtpe = classType(cdef, tparams, symbolic)
     atPos(cdef.pos.focus)(
-      DefDef(mods, name, tparams, cparamss, classtpe,
-        New(classtpe, mmap(cparamss)(gen.paramToArg)))
+      DefDef(caseMods, nme.apply, tparams, cparamss, classType(cdef, tparams),
+        New(classType(cdef, tparams), mmap(cparamss)(gen.paramToArg)))
     )
   }
-
-  /** The apply method corresponding to a case class
-   */
-  def caseModuleApplyMeth(cdef: ClassDef): DefDef = factoryMeth(caseMods, nme.apply, cdef, symbolic = true)
 
   /** The unapply method corresponding to a case class
    */
@@ -200,7 +195,7 @@ trait Unapplies extends ast.TreeDSL
   def caseClassCopyMeth(cdef: ClassDef): Option[DefDef] = {
     def isDisallowed(vd: ValDef) = isRepeatedParamType(vd.tpt) || isByNameParamType(vd.tpt)
     val cparamss  = constrParamss(cdef)
-    val flat      = cparamss.flatten
+    val flat      = cparamss flatten
 
     if (cdef.symbol.hasAbstractFlag || (flat exists isDisallowed)) None
     else {

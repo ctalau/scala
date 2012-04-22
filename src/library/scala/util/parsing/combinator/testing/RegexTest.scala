@@ -3,7 +3,6 @@ package scala.util.parsing.combinator.testing
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.input._
-import language.postfixOps
 
 case class Ident(s: String)
 case class Number(n: Int)

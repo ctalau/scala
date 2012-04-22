@@ -10,7 +10,6 @@ package scala.collection
 package generic
 
 import mutable.{Builder, MapBuilder}
-import language.higherKinds
 
 /** A template for companion objects of `Map` and subclasses thereof.
  *

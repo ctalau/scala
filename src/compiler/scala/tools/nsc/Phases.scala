@@ -7,7 +7,6 @@ package scala.tools.nsc
 
 import symtab.Flags
 import util.TableDef
-import language.postfixOps
 
 object Phases {
   val MaxPhases = 64

@@ -1,6 +1,6 @@
-import scala.reflect.mirror._
+import scala.reflect._
 
 object Foo extends App {
-  reify{def printf(format: String, args: Any*): String = null }
-  reify{def printf(format: String, args: Any*): String = ("abc": @cloneable)}
+  Code.lift{def printf(format: String, args: Any*): String = null }
+  Code.lift{def printf(format: String, args: Any*): String = ("abc": @cloneable)}
 }

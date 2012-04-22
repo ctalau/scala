@@ -9,7 +9,7 @@ trait CPSUtils {
   import global._
   import definitions._
 
-  var cpsEnabled = false
+  var cpsEnabled = true
   val verbose: Boolean = System.getProperty("cpsVerbose", "false") == "true"
   def vprintln(x: =>Any): Unit = if (verbose) println(x)
 
@@ -24,7 +24,6 @@ trait CPSUtils {
     val shift           = newTermName("shift")
     val shiftR          = newTermName("shiftR")
     val shiftSuffix     = newTermName("$shift")
-    val shiftUnit0      = newTermName("shiftUnit0")
     val shiftUnit       = newTermName("shiftUnit")
     val shiftUnitR      = newTermName("shiftUnitR")
   }
@@ -39,7 +38,6 @@ trait CPSUtils {
   lazy val ModCPS = definitions.getRequiredModule("scala.util.continuations")
 
   lazy val MethShiftUnit  = definitions.getMember(ModCPS, cpsNames.shiftUnit)
-  lazy val MethShiftUnit0 = definitions.getMember(ModCPS, cpsNames.shiftUnit0)
   lazy val MethShiftUnitR = definitions.getMember(ModCPS, cpsNames.shiftUnitR)
   lazy val MethShift      = definitions.getMember(ModCPS, cpsNames.shift)
   lazy val MethShiftR     = definitions.getMember(ModCPS, cpsNames.shiftR)

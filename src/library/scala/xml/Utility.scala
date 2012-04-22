@@ -10,7 +10,6 @@ package scala.xml
 
 import scala.collection.mutable
 import parsing.XhtmlEntities
-import language.implicitConversions
 
 /**
  * The `Utility` object provides utility functions for processing instances
@@ -21,8 +20,6 @@ import language.implicitConversions
 object Utility extends AnyRef with parsing.TokenTests {
   final val SU = '\u001A'
 
-  // [Martin] This looks dubious. We don't convert StringBuilders to
-  // Strings anywhere else, why do it here?
   implicit def implicitSbToString(sb: StringBuilder) = sb.toString()
 
   // helper for the extremely oft-repeated sequence of creating a
@@ -140,7 +137,7 @@ object Utility extends AnyRef with parsing.TokenTests {
    * @return    `'''null'''` if `ref` was not a predefined entity.
    */
   final def unescape(ref: String, s: StringBuilder): StringBuilder =
-    ((unescMap get ref) map (s append _)).orNull
+    (unescMap get ref) map (s append _) orNull
 
   /**
    * Returns a set of all namespaces used in a sequence of nodes

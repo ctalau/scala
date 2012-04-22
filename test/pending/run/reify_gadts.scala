@@ -1,7 +1,9 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     /* The syntax tree of a toy language */
     abstract class Term[T]
 
@@ -34,5 +36,9 @@ object Test extends App {
     }
     println(
       eval(If(IsZero(Lit(1)), Lit(41), Succ(Lit(41)))))
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

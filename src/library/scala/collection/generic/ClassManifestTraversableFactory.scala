@@ -9,8 +9,6 @@
 package scala.collection
 package generic
 
-import language.higherKinds
-
 /** A template for companion objects of `ClassManifestTraversable` and
  *  subclasses thereof.
  *

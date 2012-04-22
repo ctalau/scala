@@ -7,7 +7,7 @@ package scala.tools.nsc
 package ast
 
 import symtab._
-import reporters.{Reporter => NscReporter}
+import reporters.Reporter
 import util.{Position, NoPosition}
 import util.DocStrings._
 import scala.reflect.internal.Chars._
@@ -21,7 +21,7 @@ trait DocComments { self: Global =>
 
   var cookedDocComments = Map[Symbol, String]()
 
-  def reporter: NscReporter
+  def reporter: Reporter
 
   /** The raw doc comment map */
   val docComments = mutable.HashMap[Symbol, DocComment]()
@@ -252,7 +252,7 @@ trait DocComments { self: Global =>
       def replaceInheritdoc(childSection: String, parentSection: => String) =
         if (childSection.indexOf("@inheritdoc") == -1)
           childSection
-        else
+        else 
           childSection.replaceAllLiterally("@inheritdoc", parentSection)
 
       def getParentSection(section: (Int, Int)): String = {
@@ -275,9 +275,9 @@ trait DocComments { self: Global =>
           }
 
         child.substring(section._1, section._1 + 7) match {
-          case param@("@param "|"@tparam"|"@throws") =>
+          case param@("@param "|"@tparam"|"@throws") => 
             sectionString(extractSectionParam(child, section), parentNamedParams(param.trim))
-          case _                                     =>
+          case _                                     => 
             sectionString(extractSectionTag(child, section), parentTagMap)
         }
       }
@@ -367,7 +367,7 @@ trait DocComments { self: Global =>
             case vname  =>
               lookupVariable(vname, site) match {
                 case Some(replacement) => replaceWith(replacement)
-                case None              => reporter.warning(sym.pos, "Variable " + vname + " undefined in comment for " + sym + " in " + site)
+                case None              => reporter.warning(sym.pos, "Variable " + vname + " undefined in comment for " + sym)
               }
             }
         }
@@ -495,7 +495,8 @@ trait DocComments { self: Global =>
               val tpe = getType(repl.trim)
               if (tpe != NoType) tpe
               else {
-                val alias1 = alias.cloneSymbol(definitions.RootClass, alias.rawflags, newTypeName(repl))
+                val alias1 = alias.cloneSymbol(definitions.RootClass)
+                alias1.name = newTypeName(repl)
                 typeRef(NoPrefix, alias1, Nil)
               }
             case None =>
@@ -522,9 +523,10 @@ trait DocComments { self: Global =>
       }
 
       for (defn <- defined) yield {
-        defn.cloneSymbol(sym.owner, sym.flags | Flags.SYNTHETIC) modifyInfo (info =>
-          substAliases(info).asSeenFrom(site.thisType, sym.owner)
-        )
+        val useCase = defn.cloneSymbol
+        useCase.owner = sym.owner
+        useCase.flags = sym.flags
+        useCase.setFlag(Flags.SYNTHETIC).setInfo(substAliases(defn.info).asSeenFrom(site.thisType, sym.owner))
       }
     }
   }

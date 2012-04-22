@@ -8,8 +8,6 @@
 
 package scala.concurrent
 
-import language.{higherKinds, implicitConversions}
-
 /** The `TaskRunner` trait...
  *
  *  @author Philipp Haller

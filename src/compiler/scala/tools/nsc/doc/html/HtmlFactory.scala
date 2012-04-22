@@ -71,7 +71,6 @@ class HtmlFactory(val universe: doc.Universe, index: doc.Index) {
     "signaturebg.gif",
     "signaturebg2.gif",
     "typebg.gif",
-    "conversionbg.gif",
     "valuemembersbg.gif",
 
     "navigation-li-a.png",
@@ -81,8 +80,6 @@ class HtmlFactory(val universe: doc.Universe, index: doc.Index) {
     "selected.png",
     "selected2-right.png",
     "selected2.png",
-    "selected-right-implicits.png",
-    "selected-implicits.png",
     "unselected.png"
   )
 

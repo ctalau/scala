@@ -13,10 +13,7 @@ import scala.tools.nsc.util.WeakHashSet
 abstract class SymbolTable extends api.Universe
                               with Collections
                               with Names
-                              with SymbolCreations
                               with Symbols
-                              with SymbolFlags
-                              with FreeVars
                               with Types
                               with Kinds
                               with ExistentialsAndSkolems
@@ -35,10 +32,6 @@ abstract class SymbolTable extends api.Universe
                               with TypeDebugging
                               with Importers
                               with Required
-                              with TreeBuildUtil
-                              with Reporters
-                              with CapturedVariables
-                              with StdAttachments
 {
   def rootLoader: LazyType
   def log(msg: => AnyRef): Unit
@@ -53,13 +46,6 @@ abstract class SymbolTable extends api.Universe
 
   /** Overridden when we know more about what was happening during a failure. */
   def supplementErrorMessage(msg: String): String = msg
-  
-  private[scala] def printCaller[T](msg: String)(result: T) = {
-    Console.err.println(msg + ": " + result)
-    Console.err.println("Called from:")
-    (new Throwable).getStackTrace.drop(2).take(15).foreach(Console.err.println)
-    result
-  }
 
   private[scala] def printResult[T](msg: String)(result: T) = {
     Console.err.println(msg + ": " + result)
@@ -69,19 +55,6 @@ abstract class SymbolTable extends api.Universe
     log(msg + ": " + result)
     result
   }
-  private[scala] def logResultIf[T](msg: String, cond: T => Boolean)(result: T): T = {
-    if (cond(result))
-      log(msg + ": " + result)
-
-    result
-  }
-
-  /** Dump each symbol to stdout after shutdown.
-   */
-  final val traceSymbolActivity = sys.props contains "scalac.debug.syms"
-  object traceSymbols extends {
-    val global: SymbolTable.this.type = SymbolTable.this
-  } with util.TraceSymbolActivity
 
   /** Are we compiling for Java SE? */
   // def forJVM: Boolean
@@ -113,11 +86,6 @@ abstract class SymbolTable extends api.Universe
 
   final def atPhaseStack: List[Phase] = phStack
   final def phase: Phase = ph
-
-  def atPhaseStackMessage = atPhaseStack match {
-    case Nil    => ""
-    case ps     => ps.reverseMap("->" + _).mkString("(", " ", ")")
-  }
 
   final def phase_=(p: Phase) {
     //System.out.println("setting phase to " + p)
@@ -170,7 +138,7 @@ abstract class SymbolTable extends api.Universe
     try op
     finally popPhase(saved)
   }
-
+  
 
   /** Since when it is to be "at" a phase is inherently ambiguous,
    *  a couple unambiguously named methods.
@@ -232,7 +200,7 @@ abstract class SymbolTable extends api.Universe
   def arrayToRepeated(tp: Type): Type = tp match {
     case MethodType(params, rtpe) =>
       val formals = tp.paramTypes
-      assert(formals.last.typeSymbol == definitions.ArrayClass, formals)
+      assert(formals.last.typeSymbol == definitions.ArrayClass)
       val method = params.last.owner
       val elemtp = formals.last.typeArgs.head match {
         case RefinedType(List(t1, t2), _) if (t1.typeSymbol.isAbstractType && t2.typeSymbol == definitions.ObjectClass) =>
@@ -240,7 +208,8 @@ abstract class SymbolTable extends api.Universe
         case t =>
           t
       }
-      val newParams = method.newSyntheticValueParams(formals.init :+ definitions.javaRepeatedType(elemtp))
+      val newParams = method.newSyntheticValueParams(
+        formals.init :+ appliedType(definitions.JavaRepeatedParamClass.typeConstructor, List(elemtp)))
       MethodType(newParams, rtpe)
     case PolyType(tparams, rtpe) =>
       PolyType(tparams, arrayToRepeated(rtpe))
@@ -267,8 +236,6 @@ abstract class SymbolTable extends api.Universe
   object perRunCaches {
     import java.lang.ref.WeakReference
     import scala.runtime.ScalaRunTime.stringOf
-
-    import language.reflectiveCalls
 
     // We can allow ourselves a structural type, these methods
     // amount to a few calls per run at most.  This does suggest

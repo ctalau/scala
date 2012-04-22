@@ -10,8 +10,6 @@
 package scala.collection
 package generic
 
-import language.higherKinds
-
 /** A template for companion objects of `immutable.Map` and subclasses thereof.
  *    @author Martin Odersky
  *    @version 2.8

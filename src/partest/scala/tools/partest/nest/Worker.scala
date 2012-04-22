@@ -181,9 +181,7 @@ class Worker(val fileManager: FileManager, params: TestRunParams) extends Actor 
   //
   private def replaceSlashes(dir: File, s: String): String = {
     val base = (dir.getAbsolutePath + File.separator).replace('\\', '/')
-    var regex = """\Q%s\E""" format base
-    if (isWin) regex = "(?i)" + regex
-    s.replace('\\', '/').replaceAll(regex, "")
+    s.replace('\\', '/').replaceAll("""\Q%s\E""" format base, "")
   }
 
   private def currentFileString = {
@@ -523,15 +521,9 @@ class Worker(val fileManager: FileManager, params: TestRunParams) extends Actor 
       runTestCommon(file, expectFailure = false)((logFile, outDir) => {
         val dir      = file.getParentFile
 
-        // adding codelib.jar to the classpath
-        // codelib provides the possibility to override standard reify
-        // this shields the massive amount of reification tests from changes in the API
-        execTest(outDir, logFile, PathSettings.srcCodeLib.toString) && {
-          // cannot replace paths here since this also inverts slashes
-          // which affects a bunch of tests
-          //fileManager.mapFile(logFile, replaceSlashes(dir, _))
-          diffCheck(compareOutput(dir, logFile))
-        }
+        // adding code.jar to the classpath (to provide Code.lift services for reification tests)
+        execTest(outDir, logFile, PathSettings.srcCodeLib.toString) &&
+        diffCheck(compareOutput(dir, logFile))
       })
 
     // Apache Ant 1.6 or newer

@@ -11,7 +11,6 @@ package scala.collection
 import generic._
 import TraversableView.NoBuilder
 import immutable.Stream
-import language.implicitConversions
 
 /** A template trait for non-strict views of iterable collections.
  *  $iterableViewInfo

@@ -1,1 +1,1 @@
-5: @Foo.asInstanceOf[Int]
+(5: Int(5) @Foo)

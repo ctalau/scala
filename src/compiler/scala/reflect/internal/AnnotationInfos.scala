@@ -116,7 +116,7 @@ trait AnnotationInfos extends api.AnnotationInfos { self: SymbolTable =>
     // Classfile annot: args empty. Scala annot: assocs empty.
     assert(args.isEmpty || assocs.isEmpty, atp)
 
-    // necessary for reification, see Reifiers.scala for more info
+    // @xeno.by: necessary for reification, see Reifiers.scala for more info
     private var orig: Tree = EmptyTree
     def original = orig
     def setOriginal(t: Tree): this.type = { orig = t; this }
@@ -168,14 +168,23 @@ trait AnnotationInfos extends api.AnnotationInfos { self: SymbolTable =>
    *
    *  `assocs` stores arguments to classfile annotations as name-value pairs.
    */
-  sealed abstract class AnnotationInfo {
+  sealed abstract class AnnotationInfo extends Product3[Type, List[Tree], List[(Name, ClassfileAnnotArg)]] {
     def atp: Type
     def args: List[Tree]
     def assocs: List[(Name, ClassfileAnnotArg)]
 
-    // necessary for reification, see Reifiers.scala for more info
+    // @xeno.by: necessary for reification, see Reifiers.scala for more info
     def original: Tree
     def setOriginal(t: Tree): this.type
+
+    /** Hand rolling Product. */
+    def _1 = atp
+    def _2 = args
+    def _3 = assocs
+    // @xeno.by: original hasn't become a product member for backward compatibility purposes
+    // def _4 = original
+    def canEqual(other: Any) = other.isInstanceOf[AnnotationInfo]
+    override def productPrefix = "AnnotationInfo"
 
     // see annotationArgRewriter
     lazy val isTrivial = atp.isTrivial && !hasArgWhich(_.isInstanceOf[This])
@@ -261,7 +270,7 @@ trait AnnotationInfos extends api.AnnotationInfos { self: SymbolTable =>
   }
 
   lazy val classfileAnnotArgManifest: ClassManifest[ClassfileAnnotArg] =
-    reflect.ClassManifest[ClassfileAnnotArg](classOf[ClassfileAnnotArg])
+    reflect.ClassManifest.classType(classOf[ClassfileAnnotArg])
 
   object UnmappableAnnotation extends CompleteAnnotationInfo(NoType, Nil, Nil)
 }

@@ -1,10 +1,16 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     List(1, 2, 3) match {
       case foo :: bar :: _ => println(foo * bar)
       case _ => println("this is getting out of hand!")
     }
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

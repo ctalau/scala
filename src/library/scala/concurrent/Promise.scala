@@ -8,6 +8,11 @@
 
 package scala.concurrent
 
+import scala.util.{ Try, Success, Failure }
+
+
+
+
 /** Promise is an object which can be completed with a value or failed
  *  with an exception.
  *
@@ -25,6 +30,8 @@ package scala.concurrent
  */
 trait Promise[T] {
 
+  import nondeterministic._
+
   /** Future containing the value of this promise.
    */
   def future: Future[T]
@@ -35,7 +42,7 @@ trait Promise[T] {
    *
    *  $promiseCompletion
    */
-  def complete(result: Either[Throwable, T]): this.type = if (tryComplete(result)) this else throwCompleted
+  def complete(result:Try[T]): this.type = if (tryComplete(result)) this else throwCompleted
 
   /** Tries to complete the promise with either a value or the exception.
    *
@@ -43,7 +50,7 @@ trait Promise[T] {
    *
    *  @return    If the promise has already been completed returns `false`, or `true` otherwise.
    */
-  def tryComplete(result: Either[Throwable, T]): Boolean
+  def tryComplete(result: Try[T]): Boolean
 
   /** Completes this promise with the specified future, once that future is completed.
    *
@@ -70,7 +77,7 @@ trait Promise[T] {
    *
    *  @return    If the promise has already been completed returns `false`, or `true` otherwise.
    */
-  def trySuccess(value: T): Boolean = tryComplete(Right(value))
+  def trySuccess(value: T): Boolean = tryComplete(Success(value))
 
   /** Completes the promise with an exception.
    *
@@ -88,7 +95,7 @@ trait Promise[T] {
    *
    *  @return    If the promise has already been completed returns `false`, or `true` otherwise.
    */
-  def tryFailure(t: Throwable): Boolean = tryComplete(Left(t))
+  def tryFailure(t: Throwable): Boolean = tryComplete(Failure(t))
 
   /** Wraps a `Throwable` in an `ExecutionException` if necessary. TODO replace with `resolver` from scala.concurrent
    *
@@ -107,30 +114,12 @@ trait Promise[T] {
 
 object Promise {
 
-  /** Creates a promise object which can be completed with a value.
-   *  
-   *  @tparam T       the type of the value in the promise
-   *  @param execctx  the execution context on which the promise is created on
-   *  @return         the newly created `Promise` object
-   */
-  def apply[T]()(implicit executor: ExecutionContext): Promise[T] = new impl.Promise.DefaultPromise[T]()
+  def kept[T](result: T)(implicit execctx: ExecutionContext): Promise[T] =
+    execctx keptPromise result
 
-  /** Creates an already completed Promise with the specified exception.
-   *  
-   *  @tparam T       the type of the value in the promise
-   *  @param execctx  the execution context on which the promise is created on
-   *  @return         the newly created `Promise` object
-   */
-  def failed[T](exception: Throwable)(implicit executor: ExecutionContext): Promise[T] = new impl.Promise.KeptPromise[T](Left(exception))
+  def broken[T](t: Throwable)(implicit execctx: ExecutionContext): Promise[T] =
+    execctx brokenPromise t
 
-  /** Creates an already completed Promise with the specified result.
-   *  
-   *  @tparam T       the type of the value in the promise
-   *  @param execctx  the execution context on which the promise is created on
-   *  @return         the newly created `Promise` object
-   */
-  def successful[T](result: T)(implicit executor: ExecutionContext): Promise[T] = new impl.Promise.KeptPromise[T](Right(result))
-  
 }
 
 

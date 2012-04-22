@@ -14,7 +14,6 @@ import scala.collection.parallel.ParMap
 import scala.collection.parallel.TaskSupport
 
 import annotation.unchecked.uncheckedVariance
-import language.higherKinds
 
 /** A template trait for collections having a companion.
  *

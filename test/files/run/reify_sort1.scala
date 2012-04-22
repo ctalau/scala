@@ -1,7 +1,9 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     def sort(a: List[Int]): List[Int] = {
       if (a.length < 2)
         a
@@ -16,5 +18,9 @@ object Test extends App {
     val xs = List(6, 2, 8, 5, 1)
     println(xs)
     println(sort(xs))
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

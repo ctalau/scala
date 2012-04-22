@@ -10,101 +10,128 @@ package scala.concurrent.impl
 
 
 
-import java.util.concurrent.{Callable, Executor, ExecutorService, Executors, ThreadFactory}
+import java.util.concurrent.{Callable, ExecutorService}
 import scala.concurrent.forkjoin._
-import scala.concurrent.{ExecutionContext, resolver, Awaitable}
+import scala.concurrent.{ExecutionContext, resolver, Awaitable, body2awaitable}
+import scala.util.{ Try, Success, Failure }
 import scala.concurrent.util.{ Duration }
+import scala.collection.mutable.Stack
 
 
 
-private[scala] class ExecutionContextImpl(es: AnyRef) extends ExecutionContext with Executor {
+private[scala] class ExecutionContextImpl(val executorService: AnyRef) extends ExecutionContext {
   import ExecutionContextImpl._
-  
-  val executorService: AnyRef = if (es eq null) getExecutorService else es
-  
-  // to ensure that the current execution context thread local is properly set
-  def executorsThreadFactory = new ThreadFactory {
-    def newThread(r: Runnable) = new Thread(new Runnable {
-      override def run() {
-        currentExecutionContext.set(ExecutionContextImpl.this)
-        r.run()
-      }
-    })
-  }
-  
-  // to ensure that the current execution context thread local is properly set
-  def forkJoinPoolThreadFactory = new ForkJoinPool.ForkJoinWorkerThreadFactory {
-    def newThread(fjp: ForkJoinPool) = new ForkJoinWorkerThread(fjp) {
-      override def onStart() {
-        currentExecutionContext.set(ExecutionContextImpl.this)
-      }
-    }
-  }
-  
-  def getExecutorService: AnyRef =
-    if (scala.util.Properties.isJavaAtLeast("1.6")) {
-      val vendor = scala.util.Properties.javaVmVendor
-      if ((vendor contains "Oracle") || (vendor contains "Sun") || (vendor contains "Apple"))
-        new ForkJoinPool(
-          Runtime.getRuntime.availableProcessors(),
-          forkJoinPoolThreadFactory,
-          null,
-          false)
-      else
-        Executors.newCachedThreadPool(executorsThreadFactory)
-    } else Executors.newCachedThreadPool(executorsThreadFactory)
 
   def execute(runnable: Runnable): Unit = executorService match {
     case fj: ForkJoinPool =>
-      Thread.currentThread match {
-        case fjw: ForkJoinWorkerThread if fjw.getPool eq fj =>
-          val fjtask = runnable match {
-            case fjt: ForkJoinTask[_] => fjt
-            case _ => ForkJoinTask.adapt(runnable)
-          }
-          fjtask.fork
-        case _ =>
-          fj.execute(runnable)
+      if (Thread.currentThread.isInstanceOf[ForkJoinWorkerThread]) {
+        val fjtask = ForkJoinTask.adapt(runnable)
+        fjtask.fork
+      } else {
+        fj.execute(runnable)
       }
-    case executor: Executor =>
-      executor execute runnable
+    case executorService: ExecutorService =>
+      executorService execute runnable
   }
 
-  def internalBlockingCall[T](awaitable: Awaitable[T], atMost: Duration): T = {
-    Future.releaseStack(this)
-    
-    executorService match {
-      case fj: ForkJoinPool =>
-        var result: T = null.asInstanceOf[T]
-        val managedBlocker = new ForkJoinPool.ManagedBlocker {
-          @volatile var isdone = false
-          def block() = {
-            result = awaitable.result(atMost)(scala.concurrent.Await.canAwaitEvidence)
-            isdone = true
-            true
-          }
-          def isReleasable = isdone
+  def execute[U](body: () => U): Unit = execute(new Runnable {
+    def run() = body()
+  })
+
+  def promise[T]: Promise[T] = new Promise.DefaultPromise[T]()(this)
+
+  def future[T](body: =>T): Future[T] = {
+    val p = promise[T]
+
+    dispatchFuture {
+      () =>
+      p complete {
+        try {
+          Success(body)
+        } catch {
+          case e => resolver(e)
         }
-        ForkJoinPool.managedBlock(managedBlocker)
-        result
-      case _ =>
-        awaitable.result(atMost)(scala.concurrent.Await.canAwaitEvidence)
+      }
+    }
+
+    p.future
+  }
+
+  def blocking[T](atMost: Duration)(body: =>T): T = blocking(body2awaitable(body), atMost)
+
+  def blocking[T](awaitable: Awaitable[T], atMost: Duration): T = {
+    currentExecutionContext.get match {
+      case null => awaitable.await(atMost)(null) // outside - TODO - fix timeout case
+      case x => x.blockingCall(awaitable) // inside an execution context thread
     }
   }
 
   def reportFailure(t: Throwable) = t match {
-    // `Error`s are currently wrapped by `resolver`.
-    // Also, re-throwing `Error`s here causes an exception handling test to fail.
-    //case e: Error => throw e
+    case e: Error => throw e // rethrow serious errors
     case t => t.printStackTrace()
   }
+
+  /** Only callable from the tasks running on the same execution context. */
+  private def blockingCall[T](body: Awaitable[T]): T = {
+    releaseStack()
+
+    // TODO see what to do with timeout
+    body.await(Duration.fromNanos(0))(CanAwaitEvidence)
+  }
+
+  // an optimization for batching futures
+  // TODO we should replace this with a public queue,
+  // so that it can be stolen from
+  // OR: a push to the local task queue should be so cheap that this is
+  // not even needed, but stealing is still possible
+  private val _taskStack = new ThreadLocal[Stack[() => Unit]]()
+
+  private def releaseStack(): Unit =
+    _taskStack.get match {
+      case stack if (stack ne null) && stack.nonEmpty =>
+        val tasks = stack.elems
+        stack.clear()
+        _taskStack.remove()
+        dispatchFuture(() => _taskStack.get.elems = tasks, true)
+      case null =>
+        // do nothing - there is no local batching stack anymore
+      case _ =>
+        _taskStack.remove()
+    }
+
+  private[impl] def dispatchFuture(task: () => Unit, force: Boolean = false): Unit =
+    _taskStack.get match {
+      case stack if (stack ne null) && !force => stack push task
+      case _ => this.execute(
+        new Runnable {
+          def run() {
+            try {
+              val taskStack = Stack[() => Unit](task)
+              _taskStack set taskStack
+              while (taskStack.nonEmpty) {
+                val next = taskStack.pop()
+                try {
+                  next.apply()
+                } catch {
+                  case e =>
+                    // TODO catching all and continue isn't good for OOME
+                    reportFailure(e)
+                }
+              }
+            } finally {
+              _taskStack.remove()
+            }
+          }
+        }
+      )
+    }
 
 }
 
 
-private[concurrent] object ExecutionContextImpl {
+object ExecutionContextImpl {
 
-  private[concurrent] def currentExecutionContext: ThreadLocal[ExecutionContext] = new ThreadLocal[ExecutionContext] {
+  private[concurrent] def currentExecutionContext: ThreadLocal[ExecutionContextImpl] = new ThreadLocal[ExecutionContextImpl] {
     override protected def initialValue = null
   }
 

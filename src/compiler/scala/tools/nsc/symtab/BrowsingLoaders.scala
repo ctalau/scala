@@ -105,7 +105,7 @@ abstract class BrowsingLoaders extends SymbolLoaders {
    */
   override def enterToplevelsFromSource(root: Symbol, name: String, src: AbstractFile) {
     try {
-      if (root.isEffectiveRoot) // RootClass or EmptyPackageClass
+      if (root == definitions.RootClass || root == definitions.EmptyPackageClass)
         super.enterToplevelsFromSource(root, name, src)
       else
         browseTopLevel(root, src)

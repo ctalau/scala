@@ -11,7 +11,6 @@ import xml.{ EntityRef, Text }
 import xml.XML.{ xmlns }
 import symtab.Flags.MUTABLE
 import scala.tools.util.StringOps.splitWhere
-import language.implicitConversions
 
 /** This class builds instance of `Tree` that represent XML.
  *
@@ -30,7 +29,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
 
   private[parser] var isPattern: Boolean = _
 
-  private object xmltypes extends TypeNames {
+  private trait XMLTypeNames extends TypeNames {
     val _Comment: NameType             = "Comment"
     val _Elem: NameType                = "Elem"
     val _EntityRef: NameType           = "EntityRef"
@@ -45,7 +44,7 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     val _UnprefixedAttribute: NameType = "UnprefixedAttribute"
   }
 
-  private object xmlterms extends TermNames {
+  private trait XMLTermNames extends TermNames {
     val _Null: NameType     = "Null"
     val __Elem: NameType    = "Elem"
     val __Text: NameType    = "Text"
@@ -55,6 +54,15 @@ abstract class SymbolicXMLBuilder(p: Parsers#Parser, preserveWS: Boolean) {
     val _scope: NameType    = "$scope"
     val _tmpscope: NameType = "$tmpscope"
     val _xml: NameType      = "xml"
+  }
+
+  private object xmltypes extends XMLTypeNames {
+    type NameType = TypeName
+    implicit def createNameType(name: String): TypeName = newTypeNameCached(name)
+  }
+  private object xmlterms extends XMLTermNames {
+    type NameType = TermName
+    implicit def createNameType(name: String): TermName = newTermNameCached(name)
   }
 
   import xmltypes.{_Comment, _Elem, _EntityRef, _Group, _MetaData, _NamespaceBinding, _NodeBuffer,

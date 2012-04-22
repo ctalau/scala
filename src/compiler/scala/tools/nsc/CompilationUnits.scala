@@ -5,7 +5,7 @@
 
 package scala.tools.nsc
 
-import util.{ FreshNameCreator, Position, NoPosition, BatchSourceFile, SourceFile, NoSourceFile }
+import util.{ FreshNameCreator, Position, NoPosition, SourceFile, NoSourceFile }
 import scala.collection.mutable
 import scala.collection.mutable.{ LinkedHashSet, ListBuffer }
 
@@ -61,9 +61,6 @@ trait CompilationUnits { self: Global =>
     /** things to check at end of compilation unit */
     val toCheck = new ListBuffer[() => Unit]
 
-    /** The features that were already checked for this unit */
-    var checkedFeatures = Set[Symbol]()
-
     def position(pos: Int) = source.position(pos)
 
     /** The position of a targeted type check
@@ -88,13 +85,12 @@ trait CompilationUnits { self: Global =>
       reporter.warning(pos, msg)
 
     def deprecationWarning(pos: Position, msg: String) =
-      currentRun.deprecationWarnings0.warn(pos, msg)
+      if (opt.deprecation) warning(pos, msg)
+      else currentRun.deprecationWarnings ::= ((pos, msg))
 
     def uncheckedWarning(pos: Position, msg: String) =
-      currentRun.uncheckedWarnings0.warn(pos, msg)
-
-    def inlinerWarning(pos: Position, msg: String) =
-      currentRun.inlinerWarnings.warn(pos, msg)
+      if (opt.unchecked) warning(pos, msg)
+      else currentRun.uncheckedWarnings ::= ((pos, msg))
 
     def incompleteInputError(pos: Position, msg:String) =
       reporter.incompleteInputError(pos, msg)
@@ -108,14 +104,10 @@ trait CompilationUnits { self: Global =>
     override def toString() = source.toString()
 
     def clear() {
-      fresh = new FreshNameCreator.Default
-      body = EmptyTree
+      fresh = null
+      body = null
       depends.clear()
       defined.clear()
-      synthetics.clear()
-      toCheck.clear()
-      checkedFeatures = Set()
-      icode.clear()
     }
   }
 }

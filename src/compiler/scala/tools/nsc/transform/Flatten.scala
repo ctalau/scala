@@ -27,7 +27,6 @@ abstract class Flatten extends InfoTransform {
       scope unlink old
 
     scope enter sym
-    log("lifted " + sym.fullLocationString)
     old
   }
 
@@ -37,7 +36,7 @@ abstract class Flatten extends InfoTransform {
       debuglog("re-enter " + sym.fullLocationString)
       val old = replaceSymbolInCurrentScope(sym)
       if (old ne NoSymbol)
-        log("unlinked " + old.fullLocationString + " after lifting " + sym)
+        debuglog("lifted " + sym.fullLocationString + ", unlinked " + old)
     }
   }
   private def liftSymbol(sym: Symbol) {
@@ -109,7 +108,7 @@ abstract class Flatten extends InfoTransform {
       tree match {
         case PackageDef(_, _) =>
           liftedDefs(tree.symbol.moduleClass) = new ListBuffer
-        case Template(_, _, _) if tree.symbol.isDefinedInPackage =>
+        case Template(_, _, _) if tree.symbol.owner.hasPackageFlag =>
           liftedDefs(tree.symbol.owner) = new ListBuffer
         case _ =>
       }

@@ -1,7 +1,9 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
-  reify {
+  val code = scala.reflect.Code.lift{
     /** Nested methods can use and even update everything
      *  visible in their scope (including local variables or
      *  arguments of enclosing methods).
@@ -46,5 +48,9 @@ object Test extends App {
     println(ar)
     sort(ar)
     println(ar)
-  }.eval
+  };
+
+  val reporter = new ConsoleReporter(new Settings)
+  val toolbox = new ToolBox(reporter)
+  toolbox.runExpr(code.tree)
 }

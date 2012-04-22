@@ -11,7 +11,6 @@ package scala.util
 import collection.mutable.ArrayBuffer
 import collection.generic.CanBuildFrom
 import scala.collection.immutable.{ List, Stream }
-import language.{implicitConversions, higherKinds}
 
 /**
  *  @author Stephane Micheloud
@@ -118,18 +117,7 @@ class Random(val self: java.util.Random) {
       swap(n - 1, k)
     }
 
-    (bf(xs) ++= buf).result
-  }
-
-  /** Returns a Stream of pseudorandomly chosen alphanumeric characters,
-   *  equally chosen from A-Z, a-z, and 0-9.
-   *
-   *  @since 2.8
-   */
-  def alphanumeric: Stream[Char] = {
-    def isAlphaNum(c: Char) = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-
-    Stream continually nextPrintableChar filter isAlphaNum
+    bf(xs) ++= buf result
   }
 
 }
@@ -141,6 +129,15 @@ class Random(val self: java.util.Random) {
  */
 object Random extends Random {
 
-  implicit def javaRandomToRandom(r: java.util.Random): Random = new Random(r)
+  /** Returns a Stream of pseudorandomly chosen alphanumeric characters,
+   *  equally chosen from A-Z, a-z, and 0-9.
+   *
+   *  @since 2.8
+   */
+  def alphanumeric: Stream[Char] = {
+    def isAlphaNum(c: Char) = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+
+    Stream continually nextPrintableChar filter isAlphaNum
+  }
 
 }

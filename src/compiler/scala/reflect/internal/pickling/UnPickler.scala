@@ -257,11 +257,12 @@ abstract class UnPickler /*extends reflect.generic.UnPickler*/ {
         }
 
       def isModuleFlag = (flags & MODULE) != 0L
+      def isMethodFlag = (flags & METHOD) != 0L
       def isClassRoot  = (name == classRoot.name) && (owner == classRoot.owner)
       def isModuleRoot = (name == moduleRoot.name) && (owner == moduleRoot.owner)
-      def pflags       = flags & PickledFlags
 
       def finishSym(sym: Symbol): Symbol = {
+        sym.flags         = flags & PickledFlags
         sym.privateWithin = privateWithin
         sym.info = (
           if (atEnd) {
@@ -281,27 +282,27 @@ abstract class UnPickler /*extends reflect.generic.UnPickler*/ {
       }
 
       finishSym(tag match {
-        case TYPEsym  | ALIASsym =>
-          owner.newNonClassSymbol(name.toTypeName, NoPosition, pflags)
+        case TYPEsym  => owner.newAbstractType(name.toTypeName)
+        case ALIASsym => owner.newAliasType(name.toTypeName)
         case CLASSsym =>
-          val sym = (
-            if (isClassRoot) {
-              if (isModuleFlag) moduleRoot.moduleClass setFlag pflags
-              else classRoot setFlag pflags
-            }
-            else owner.newClassSymbol(name.toTypeName, NoPosition, pflags)
-          )
+          val sym = (isClassRoot, isModuleFlag) match {
+            case (true, true)   => moduleRoot.moduleClass
+            case (true, false)  => classRoot
+            case (false, true)  => owner.newModuleClass(name.toTypeName)
+            case (false, false) => owner.newClass(name.toTypeName)
+          }
           if (!atEnd)
             sym.typeOfThis = newLazyTypeRef(readNat())
 
           sym
         case MODULEsym =>
           val clazz = at(inforef, () => readType()).typeSymbol // after the NMT_TRANSITION period, we can leave off the () => ... ()
-          if (isModuleRoot) moduleRoot setFlag pflags
-          else owner.newLinkedModule(clazz, pflags)
+          if (isModuleRoot) moduleRoot
+          else owner.newLinkedModule(clazz)
         case VALsym =>
           if (isModuleRoot) { assert(false); NoSymbol }
-          else owner.newTermSymbol(name.toTermName, NoPosition, pflags)
+          else if (isMethodFlag) owner.newMethod(name.toTermName)
+          else owner.newValue(name.toTermName)
 
         case _ =>
           errorBadSignature("bad symbol tag: " + tag)
@@ -816,10 +817,16 @@ abstract class UnPickler /*extends reflect.generic.UnPickler*/ {
       throw new RuntimeException("malformed Scala signature of " + classRoot.name + " at " + readIndex + "; " + msg)
 
     protected def errorMissingRequirement(name: Name, owner: Symbol): Symbol =
-      missingHook(owner, name) orElse MissingRequirementError.notFound(
-        "bad reference while unpickling %s: %s not found in %s".format(
-          filename, name.longString, owner.tpe.widen)
-      )
+      missingHook(owner, name) orElse {
+        val what = if (name.isTypeName) "type" else "value"
+        MissingRequirementError.notFound(
+          "while unpickling %s, reference %s %s of %s/%s/%s".format(
+            filename,
+            what, name.decode, owner.tpe.widen,
+            owner.tpe.typeSymbol.ownerChain,
+            owner.info.members.mkString("\n  ", "\n  ", ""))
+        )
+      }
 
     def inferMethodAlternative(fun: Tree, argtpes: List[Type], restpe: Type) {} // can't do it; need a compiler for that.
 

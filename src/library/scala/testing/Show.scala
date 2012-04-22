@@ -27,17 +27,17 @@ package scala.testing
  */
 trait Show {
 
-  /** An implicit definition that adds an apply method to Symbol which forwards to `test`. 
+  /** The result class of wrapper `symApply`.
    *  Prints out diagnostics of method applications.
    */
-  implicit class SymApply(f: Symbol) {
+  class SymApply(f: Symbol) {
     def apply[A](args: A*) {
       println(test(f, args: _*))
     }
   }
 
-  @deprecated("use SymApply instead", "2.10")
-  def symApply(sym: Symbol): SymApply = new SymApply(sym)
+  /** An implicit definition that adds an apply method to Symbol which forwards to `test`. */
+  implicit def symApply(sym: Symbol) = new SymApply(sym)
 
   /** Apply method with name of given symbol `f` to given arguments and return
    *  a result diagnostics.

@@ -1,14 +1,17 @@
-import scala.reflect.mirror._
+import scala.tools.nsc.reporters._
+import scala.tools.nsc.Settings
+import reflect.runtime.Mirror.ToolBox
 
 object Test extends App {
   def foo(y: Int): Int => Int = {
     def y1 = y
 
-    val fun = reify{(x: Int) => {
+    val fun = reflect.Code.lift{(x: Int) => {
       x + y1
     }}
 
-    val toolbox = mkToolBox()
+    val reporter = new ConsoleReporter(new Settings)
+    val toolbox = new ToolBox(reporter)
     val dyn = toolbox.runExpr(fun.tree)
     dyn.asInstanceOf[Int => Int]
   }

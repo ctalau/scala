@@ -14,8 +14,6 @@ import java.net.URL
 import scala.reflect.ReflectionUtils.unwrapHandler
 import ScalaClassLoader._
 import scala.util.control.Exception.{ catching }
-import language.implicitConversions
-
 // import Exceptional.unwrap
 
 trait HasClassPath {

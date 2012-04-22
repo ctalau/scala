@@ -10,7 +10,6 @@ package scala.collection
 package generic
 
 import mutable.Builder
-import language.higherKinds
 
 /** This class represents companions of classes which require ClassManifests
  *  for their element types.

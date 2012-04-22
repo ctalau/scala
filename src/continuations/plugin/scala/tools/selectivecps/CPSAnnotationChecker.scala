@@ -94,7 +94,8 @@ abstract class CPSAnnotationChecker extends CPSUtils {
       if (!cpsEnabled) return bounds
 
       val anyAtCPS = newCpsParamsMarker(NothingClass.tpe, AnyClass.tpe)
-      if (isFunctionType(tparams.head.owner.tpe) || isPartialFunctionType(tparams.head.owner.tpe)) {
+
+      if (isFunctionType(tparams.head.owner.tpe) || tparams.head.owner == PartialFunctionClass) {
         vprintln("function bound: " + tparams.head.owner.tpe + "/"+bounds+"/"+targs)
         if (hasCpsParamTypes(targs.last))
           bounds.reverse match {

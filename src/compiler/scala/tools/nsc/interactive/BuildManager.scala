@@ -13,7 +13,6 @@ import util.FakePos
 
 import dependencies._
 import io.AbstractFile
-import language.implicitConversions
 
 trait BuildManager {
 

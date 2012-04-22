@@ -10,8 +10,6 @@
 
 package scala.math
 
-import language.implicitConversions
-
 /**
  * @since 2.8
  */

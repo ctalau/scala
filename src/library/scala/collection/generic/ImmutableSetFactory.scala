@@ -10,7 +10,6 @@ package scala.collection
 package generic
 
 import mutable.{ Builder, SetBuilder }
-import language.higherKinds
 
 abstract class ImmutableSetFactory[CC[X] <: immutable.Set[X] with SetLike[X, CC[X]]]
   extends SetFactory[CC] {

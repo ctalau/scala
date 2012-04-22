@@ -28,7 +28,7 @@ object Executor {
     Console.setOut(newOut)
     Console.setErr(newOut)
     try {
-      singletonInstance(classLoader, name)
+      singletonInstance(name, classLoader)
     } catch {
       case ex: Throwable =>
         unwrapThrowable(ex) match {
