@@ -36,6 +36,7 @@ object Instrument {
         val sum10:Double = (counts take T).fold(0)((s, c) => s + c)
         
         println("\t\t" + (counts take T) + ", " + (100*sum10/sum) + "%")
+        println("\t\t" + (v.toList sortBy (-_._2) take 3 map (_._1)))
       }
       println()
       cnt = 0
