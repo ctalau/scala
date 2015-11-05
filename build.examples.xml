@@ -2,11 +2,8 @@
 
 <project name="scala-examples" default="build">
 
-  <description>
-    I am SABBUS for ${ant.project.name}, the build system for the Scala compiler
-    and core library. Please check the 'docs/README' file for more information
-    about me.
-  </description>
+  <description> I am SABBUS for t.project.name}, the build system for the Scala compiler and core
+    library. Please check the 'docs/README' file  more information about me. </description>
 
   <echo level="info" message="Running SABBUS for ${ant.project.name}..."/>
 
